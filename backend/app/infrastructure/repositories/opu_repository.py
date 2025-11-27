@@ -15,6 +15,15 @@ class OPURepository:
         self.db = db
         self.donadora_repo = DonadoraRepository(db)
 
+    async def _load_with_extracciones(self, sesion_id: int) -> Optional[SesionOPU]:
+        """Cargar sesión con extracciones usando selectinload para evitar lazy en serialización"""
+        result = await self.db.execute(
+            select(SesionOPU)
+            .options(selectinload(SesionOPU.extracciones_donadoras))
+            .where(SesionOPU.id == sesion_id)
+        )
+        return result.scalar_one_or_none()
+
     async def _resolve_donadora_id(self, extraccion_data: dict) -> int:
         """
         Obtiene el id de donadora; si viene nueva_donadora la crea.
@@ -64,8 +73,8 @@ class OPURepository:
             self.db.add(nueva_ext)
 
         await self.db.commit()
-        await self.db.refresh(sesion)
-        return sesion
+        # Volver a cargar con extracciones para evitar lazy load en la respuesta
+        return await self._load_with_extracciones(sesion.id)
 
     async def get_by_id(self, sesion_id: int) -> Optional[SesionOPU]:
         """Obtener sesión por ID con extracciones"""
@@ -113,8 +122,8 @@ class OPURepository:
                 self.db.add(nueva_ext)
 
         await self.db.commit()
-        await self.db.refresh(sesion)
-        return sesion
+        # Devolver sesión con extracciones cargadas
+        return await self._load_with_extracciones(sesion.id)
 
     async def delete(self, sesion: SesionOPU) -> bool:
         """Eliminar sesión"""
