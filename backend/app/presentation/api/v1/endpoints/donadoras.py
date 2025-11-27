@@ -8,6 +8,7 @@ from datetime import datetime
 import uuid
 from pathlib import Path
 
+from app.core.config import settings
 from app.core.dependencies import get_db, get_current_user
 from app.infrastructure.repositories.donadora_repository import DonadoraRepository
 from app.infrastructure.database.models import Donadora
