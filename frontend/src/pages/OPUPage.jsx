@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Save, Eye, X, Trash2, Search, XCircle, Calendar, User } from 'lucide-react'
@@ -45,6 +45,7 @@ export default function OPUPage() {
   const [donadoraSearch, setDonadoraSearch] = useState('')
   const [showDonadoraModal, setShowDonadoraModal] = useState(false)
   const [sessionCollapsed, setSessionCollapsed] = useState(false)
+  const isSubmittingRef = useRef(false)
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
     defaultValues: {
@@ -265,11 +266,18 @@ export default function OPUPage() {
   }
 
   const onSubmit = async (data) => {
+    // Prevenir envíos concurrentes (doble clic)
+    if (isSubmittingRef.current) {
+      console.warn('Ya hay un envío en progreso, ignorando...')
+      return
+    }
+
     if (extracciones.length === 0) {
       alert('Agrega al menos una extraccion por donadora')
       return
     }
 
+    isSubmittingRef.current = true
     setLoading(true)
     try {
       const payload = {
@@ -338,6 +346,7 @@ export default function OPUPage() {
       alert('Error al guardar sesion OPU: ' + message)
     } finally {
       setLoading(false)
+      isSubmittingRef.current = false
     }
   }
 

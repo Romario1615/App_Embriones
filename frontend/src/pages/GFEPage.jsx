@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { Heart, Save, Edit3, Trash2, Plus, Eye, Calendar, User, X } from 'lucide-react'
@@ -14,6 +14,7 @@ export default function GFEPage() {
   const [transferencias, setTransferencias] = useState([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const isSubmittingRef = useRef(false)
 
   useEffect(() => {
     loadData()
@@ -39,6 +40,13 @@ export default function GFEPage() {
   }
 
   const onSubmit = async (data) => {
+    // Prevenir envíos concurrentes (doble clic)
+    if (isSubmittingRef.current) {
+      console.warn('Ya hay un envío en progreso, ignorando...')
+      return
+    }
+
+    isSubmittingRef.current = true
     setLoading(true)
     const payload = {
       ...data,
@@ -63,6 +71,7 @@ export default function GFEPage() {
       alert('Error al guardar: ' + (error.response?.data?.detail || error.message))
     } finally {
       setLoading(false)
+      isSubmittingRef.current = false
     }
   }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Save, Edit3, Trash2, Eye, Calendar, User, X, Search } from 'lucide-react'
@@ -18,6 +18,7 @@ export default function FecundacionPage() {
   const [donadorasList, setDonadorasList] = useState([])
   const [donadoraSearch, setDonadoraSearch] = useState('')
   const [showDonadoraModal, setShowDonadoraModal] = useState(false)
+  const isSubmittingRef = useRef(false)
 
   useEffect(() => {
     loadRegistros()
@@ -71,6 +72,13 @@ export default function FecundacionPage() {
   }
 
   const onSubmit = async (data) => {
+    // Prevenir envíos concurrentes (doble clic)
+    if (isSubmittingRef.current) {
+      console.warn('Ya hay un envío en progreso, ignorando...')
+      return
+    }
+
+    isSubmittingRef.current = true
     setLoading(true)
     const payload = {
       ...data,
@@ -98,6 +106,7 @@ export default function FecundacionPage() {
       alert('Error al guardar: ' + (error.response?.data?.detail || error.message))
     } finally {
       setLoading(false)
+      isSubmittingRef.current = false
     }
   }
 

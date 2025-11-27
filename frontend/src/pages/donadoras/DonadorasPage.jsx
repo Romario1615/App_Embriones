@@ -1,7 +1,7 @@
 /**
  * Página de gestión de donadoras con autosave
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Plus, Save, Eye, X } from 'lucide-react'
@@ -19,6 +19,7 @@ export default function DonadorasPage() {
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const isSubmittingRef = useRef(false)
 
   const { donadoras, addDonadora, setDonadoras, updateDonadora } = useDonadoraStore()
 
@@ -101,6 +102,13 @@ export default function DonadorasPage() {
   }
 
   const onSubmit = async (data) => {
+    // Prevenir envíos concurrentes (doble clic)
+    if (isSubmittingRef.current) {
+      console.warn('Ya hay un envío en progreso, ignorando...')
+      return
+    }
+
+    isSubmittingRef.current = true
     setLoading(true)
     try {
       // Normalizar payload evitando strings vacíos y convirtiendo números
@@ -143,6 +151,7 @@ export default function DonadorasPage() {
       alert('Error al guardar donadora: ' + message)
     } finally {
       setLoading(false)
+      isSubmittingRef.current = false
     }
   }
 
