@@ -15,7 +15,11 @@ Base = declarative_base()
 # Preparar connect_args (SSL para PostgreSQL en producción)
 connect_args = {}
 url = make_url(settings.DATABASE_URL)
-if url.drivername.startswith("postgresql+asyncpg"):
+if url.drivername.startswith("postgresql+psycopg"):
+    if url.host and url.host not in {"localhost", "127.0.0.1"}:
+        # psycopg usa sslmode para obligar TLS en conexiones remotas
+        connect_args["sslmode"] = "require"
+elif url.drivername.startswith("postgresql+asyncpg"):
     if url.host and url.host not in {"localhost", "127.0.0.1"}:
         # Forzar SSL con certificados del sistema cuando es host remoto
         connect_args["ssl"] = ssl.create_default_context()

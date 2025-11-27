@@ -45,7 +45,7 @@ psql -h dpg-d4juup8gjchc739qi0h0-a.oregon-postgres.render.com ^
 La URL usada en `.env` es:
 
 ```
-postgresql+asyncpg://romario12:GMhv1pVZ7IePwaX0FILohW9NPbtXDUmS@dpg-d4juup8gjchc739qi0h0-a.oregon-postgres.render.com/embriones
+postgresql+psycopg://romario12:GMhv1pVZ7IePwaX0FILohW9NPbtXDUmS@dpg-d4juup8gjchc739qi0h0-a.oregon-postgres.render.com/embriones
 ```
 
 ### 5. Inicializar base de datos
