@@ -257,6 +257,33 @@ class ChequeoGFE(Base):
     transferencia = relationship("TransferenciaRealizada", back_populates="chequeos")
 
 
+# ==================== FOTOS ====================
+
+class Foto(Base):
+    """
+    Fotos asociadas a diferentes entidades (donadoras, transferencias, etc.)
+    Almacena múltiples fotos por entidad usando Cloudinary
+    """
+    __tablename__ = "fotos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entidad_tipo = Column(String(50), nullable=False, index=True)  # "donadora", "transferencia", etc.
+    entidad_id = Column(Integer, nullable=False, index=True)  # ID de la entidad
+    orden = Column(Integer, default=0, nullable=False)  # Orden de la foto (0-5)
+
+    # URLs de Cloudinary
+    url = Column(String(500), nullable=False)  # URL completa
+    thumbnail_url = Column(String(500), nullable=True)  # URL thumbnail
+    public_id = Column(String(200), nullable=False)  # Public ID para eliminación
+
+    # Metadata opcional
+    descripcion = Column(Text, nullable=True)
+
+    # Auditoría
+    fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
+    usuario_creacion_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+
+
 # ==================== DRAFTS (AUTOSAVE) ====================
 
 class Draft(Base):

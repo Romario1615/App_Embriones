@@ -9,13 +9,14 @@ import { useDonadoraStore } from '../../store/donadoraStore'
 import { useAutosave } from '../../hooks/useAutosave'
 import donadoraService from '../../services/donadoraService'
 import draftService from '../../services/draftService'
+import fotoService from '../../services/fotoService'
+import PhotoCapture from '../../components/PhotoCapture'
 
 export default function DonadorasPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { register, handleSubmit, formState: { errors }, watch, reset } = useForm()
-  const [foto, setFoto] = useState(null)
-  const [preview, setPreview] = useState(null)
+  const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -81,23 +82,28 @@ export default function DonadorasPage() {
       }
 
       reset(editableData)
-      if (data.foto_ruta) {
-        setPreview(`http://localhost:8000${data.foto_ruta}`)
+
+      // Cargar fotos existentes
+      try {
+        const fotosData = await fotoService.getByEntidad('donadora', parseInt(id))
+        const fotosFormateadas = fotosData.fotos.map(foto => ({
+          id: foto.id,
+          preview: foto.thumbnail_url || foto.url,
+          url: foto.url,
+          name: `Foto ${foto.orden + 1}`,
+          existente: true,
+          fotoId: foto.id
+        }))
+        setPhotos(fotosFormateadas)
+      } catch (error) {
+        console.log('No hay fotos para esta donadora o error cargando:', error)
+        setPhotos([])
       }
+
       setShowForm(true)
     } catch (error) {
       console.error('Error cargando donadora para editar:', error)
       alert('Error al cargar la donadora')
-    }
-  }
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      setFoto(file)
-      const reader = new FileReader()
-      reader.onloadend = () => setPreview(reader.result)
-      reader.readAsDataURL(file)
     }
   }
 
@@ -122,25 +128,62 @@ export default function DonadorasPage() {
         payload.peso_kg = parseFloat(payload.peso_kg)
       }
 
+      let donadoraId = editingId
+
       if (editingId) {
         // Actualizar donadora existente
-        const updated = await donadoraService.update(editingId, payload, foto)
+        const updated = await donadoraService.update(editingId, payload)
         updateDonadora(editingId, updated)
-        alert('Donadora actualizada exitosamente')
       } else {
         // Crear nueva donadora
-        const created = await donadoraService.create(payload, foto)
+        const created = await donadoraService.create(payload)
         addDonadora(created)
+        donadoraId = created.id
 
         // Eliminar draft
         const drafts = await draftService.getUserDrafts('donadora', 'create')
         if (drafts.length > 0) {
           await draftService.delete(drafts[0].id)
         }
-
-        alert('Donadora creada exitosamente')
       }
 
+      // Manejar fotos
+      // 1. Separar fotos nuevas de existentes
+      const fotosNuevas = photos.filter(p => !p.existente && p.file)
+      const fotosExistentes = photos.filter(p => p.existente)
+
+      // 2. Si estamos editando, eliminar fotos que fueron removidas
+      if (editingId) {
+        try {
+          const fotosActuales = await fotoService.getByEntidad('donadora', donadoraId)
+          const fotosIdExistentes = fotosExistentes.map(f => f.fotoId)
+
+          // Eliminar las que ya no están
+          for (const foto of fotosActuales.fotos) {
+            if (!fotosIdExistentes.includes(foto.id)) {
+              await fotoService.delete(foto.id)
+            }
+          }
+        } catch (error) {
+          console.error('Error eliminando fotos:', error)
+        }
+      }
+
+      // 3. Subir fotos nuevas
+      if (fotosNuevas.length > 0) {
+        try {
+          for (let i = 0; i < fotosNuevas.length; i++) {
+            const foto = fotosNuevas[i]
+            const orden = fotosExistentes.length + i
+            await fotoService.upload('donadora', donadoraId, foto.file, orden)
+          }
+        } catch (error) {
+          console.error('Error subiendo fotos:', error)
+          alert('Donadora guardada, pero hubo un error al subir algunas fotos')
+        }
+      }
+
+      alert(editingId ? 'Donadora actualizada exitosamente' : 'Donadora creada exitosamente')
       handleCancelEdit()
     } catch (error) {
       console.error('Error:', error)
@@ -157,8 +200,7 @@ export default function DonadorasPage() {
 
   const handleCancelEdit = () => {
     reset()
-    setFoto(null)
-    setPreview(null)
+    setPhotos([])
     setShowForm(false)
     setEditingId(null)
     setSearchParams({})  // Limpiar parámetros de URL
@@ -272,19 +314,15 @@ export default function DonadorasPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fotografía
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fotografías (hasta 6)
                 </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="input-field"
+                <PhotoCapture
+                  photos={photos}
+                  onChange={setPhotos}
+                  maxPhotos={6}
                 />
-                {preview && (
-                  <img src={preview} alt="Preview" className="mt-2 h-32 w-32 object-cover rounded-lg" />
-                )}
               </div>
             </div>
 
