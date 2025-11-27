@@ -7,8 +7,11 @@ import DonadoraDetail from './pages/donadoras/DonadoraDetail'
 import OPUPage from './pages/OPUPage'
 import OPUDetail from './pages/OPUDetail'
 import FecundacionPage from './pages/FecundacionPage'
+import FecundacionDetail from './pages/FecundacionDetail'
 import TransferenciaPage from './pages/TransferenciaPage'
+import TransferenciaDetail from './pages/TransferenciaDetail'
 import GFEPage from './pages/GFEPage'
+import GFEDetail from './pages/GFEDetail'
 import Layout from './components/layout/Layout'
 
 function ProtectedRoute({ children }) {
@@ -72,16 +75,31 @@ function App() {
             <FecundacionPage />
           </ProtectedRoute>
         } />
+        <Route path="/fecundacion/:fecha/:laboratorista" element={
+          <ProtectedRoute>
+            <FecundacionDetail />
+          </ProtectedRoute>
+        } />
 
         <Route path="/transferencia" element={
           <ProtectedRoute>
             <TransferenciaPage />
           </ProtectedRoute>
         } />
+        <Route path="/transferencia/:fecha" element={
+          <ProtectedRoute>
+            <TransferenciaDetail />
+          </ProtectedRoute>
+        } />
 
         <Route path="/gfe" element={
           <ProtectedRoute>
             <GFEPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/gfe/:fecha/:cliente" element={
+          <ProtectedRoute>
+            <GFEDetail />
           </ProtectedRoute>
         } />
       </Routes>

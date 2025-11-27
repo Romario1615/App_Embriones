@@ -1,22 +1,28 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
-import { Plus, Save, Edit3, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Save, Edit3, Trash2, Eye, Calendar, User, X, Search } from 'lucide-react'
 import { useFecundacionStore } from '../store/fecundacionStore'
 import fecundacionService from '../services/fecundacionService'
 import donadoraService from '../services/donadoraService'
-import DonadoraSelect from '../components/common/DonadoraSelect'
 
 export default function FecundacionPage() {
+  const navigate = useNavigate()
   const { registros, setRegistros, addRegistro, updateRegistro, removeRegistro } = useFecundacionStore()
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
   const [loading, setLoading] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [selectedDonadora, setSelectedDonadora] = useState(null)
   const [donadorasMap, setDonadorasMap] = useState({})
+  const [showForm, setShowForm] = useState(false)
+  const [donadorasList, setDonadorasList] = useState([])
+  const [donadoraSearch, setDonadoraSearch] = useState('')
+  const [showDonadoraModal, setShowDonadoraModal] = useState(false)
 
   useEffect(() => {
     loadRegistros()
     preloadDonadoras()
+    loadDonadoras()
   }, [])
 
   const preloadDonadoras = async () => {
@@ -30,6 +36,29 @@ export default function FecundacionPage() {
     } catch (error) {
       console.error('Error precargando donadoras', error)
     }
+  }
+
+  const loadDonadoras = async () => {
+    try {
+      const data = await donadoraService.getAll()
+      setDonadorasList((data || []).filter(d => d.activo !== false))
+    } catch (error) {
+      console.error('Error cargando donadoras:', error)
+    }
+  }
+
+  const filteredDonadoras = useMemo(() => {
+    const term = donadoraSearch.trim().toLowerCase()
+    if (!term) return donadorasList
+    return donadorasList.filter(d =>
+      `${d.nombre} ${d.numero_registro}`.toLowerCase().includes(term)
+    )
+  }, [donadoraSearch, donadorasList])
+
+  const handleSelectDonadora = (donadora) => {
+    setSelectedDonadora(donadora)
+    setShowDonadoraModal(false)
+    setDonadoraSearch('')
   }
 
   const loadRegistros = async () => {
@@ -63,6 +92,7 @@ export default function FecundacionPage() {
       reset()
       setSelectedDonadora(null)
       setEditingId(null)
+      setShowForm(false)
     } catch (error) {
       console.error(error)
       alert('Error al guardar: ' + (error.response?.data?.detail || error.message))
@@ -70,6 +100,24 @@ export default function FecundacionPage() {
       setLoading(false)
     }
   }
+
+  // Agrupar registros por fecha y laboratorista (sesiones)
+  const sesiones = useMemo(() => {
+    const grupos = {}
+    registros.forEach(reg => {
+      const key = `${reg.fecha_inicio_maduracion}|${reg.laboratorista}`
+      if (!grupos[key]) {
+        grupos[key] = {
+          fecha: reg.fecha_inicio_maduracion,
+          laboratorista: reg.laboratorista,
+          registros: []
+        }
+      }
+      const donadora = donadorasMap[reg.donadora_id]
+      grupos[key].registros.push({ ...reg, donadora })
+    })
+    return Object.values(grupos).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+  }, [registros, donadorasMap])
 
   const handleEdit = async (registro) => {
     setEditingId(registro.id)
@@ -107,38 +155,105 @@ export default function FecundacionPage() {
     }
   }
 
+  const handleEditSesion = async (sesion) => {
+    // Abrir formulario para permitir agregar/editar registros de esta sesión
+    setShowForm(true)
+    // Cargar el primer registro como referencia
+    if (sesion.registros.length > 0) {
+      const primerRegistro = sesion.registros[0]
+      reset({
+        laboratorista: primerRegistro.laboratorista,
+        fecha_inicio_maduracion: primerRegistro.fecha_inicio_maduracion,
+        hora_inicio_maduracion: '',
+        medio_maduracion: '',
+        temperatura: '',
+        tiempo_maduracion: '',
+        fecha_fertilizacion: '',
+        hora_fertilizacion: '',
+        semen_utilizado: '',
+        medio_fertilizacion: '',
+        concentracion_espermatica: '',
+        tiempo_coincubacion: ''
+      })
+    }
+  }
+
+  const handleDeleteSesion = async (sesion) => {
+    const mensaje = `¿Eliminar toda la sesión del ${new Date(sesion.fecha).toLocaleDateString()} con ${sesion.registros.length} registros?`
+    if (!window.confirm(mensaje)) return
+
+    try {
+      // Eliminar todos los registros de la sesión
+      await Promise.all(sesion.registros.map(reg => fecundacionService.delete(reg.id)))
+
+      // Actualizar el store
+      sesion.registros.forEach(reg => removeRegistro(reg.id))
+
+      alert('Sesión eliminada correctamente')
+    } catch (error) {
+      console.error(error)
+      alert('Error al eliminar la sesión')
+    }
+  }
+
   return (
-    <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">
-          Fecundación in vitro
-        </h1>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Módulo de Fecundación IVF</h1>
+          <p className="text-gray-600">Gestiona sesiones de fecundación in vitro</p>
+        </div>
         <button
           onClick={() => {
-            reset()
-            setSelectedDonadora(null)
-            setEditingId(null)
+            setShowForm(!showForm)
+            if (!showForm) {
+              reset()
+              setSelectedDonadora(null)
+              setEditingId(null)
+            }
           }}
-          className="btn-primary flex items-center space-x-2"
+          className="btn-primary flex items-center space-x-2 self-start md:self-center"
         >
-          <Plus size={20} />
-          <span>Nuevo registro</span>
+          {showForm ? <X size={18} /> : <Plus size={18} />}
+          <span>{showForm ? 'Cerrar formulario' : 'Nuevo registro'}</span>
         </button>
       </div>
 
       {/* Formulario */}
-      <div className="card mb-6">
-        <h2 className="text-xl font-semibold mb-4">
-          {editingId ? 'Editar fecundación' : 'Registrar fecundación'}
-        </h2>
+      {showForm && (
+        <div className="card mb-6">
+          <h2 className="text-xl font-semibold mb-4">
+            {editingId ? 'Editar fecundación' : 'Registrar fecundación'}
+          </h2>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <DonadoraSelect
-              onSelect={setSelectedDonadora}
-              selectedDonadora={selectedDonadora}
-              helperText="Escribe 2+ letras para buscar la donadora"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Donadora</label>
+              <button
+                type="button"
+                onClick={() => setShowDonadoraModal(true)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {selectedDonadora ? (
+                  <div>
+                    <p className="font-medium text-gray-900">{selectedDonadora.nombre}</p>
+                    <p className="text-sm text-gray-600">Registro: {selectedDonadora.numero_registro}</p>
+                  </div>
+                ) : (
+                  <span className="text-gray-500">Seleccionar donadora...</span>
+                )}
+              </button>
+              {selectedDonadora && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDonadora(null)}
+                  className="text-sm text-red-600 hover:text-red-800 mt-1"
+                >
+                  Limpiar selección
+                </button>
+              )}
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Laboratorista *</label>
@@ -228,10 +343,103 @@ export default function FecundacionPage() {
           </div>
         </form>
       </div>
+      )}
 
-      {/* Listado */}
-      <div className="card">
-        <h2 className="text-xl font-semibold mb-4">Registros de fecundación</h2>
+      {/* Listado de Sesiones */}
+      {!showForm && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Sesiones de Fecundación</h2>
+            <button onClick={loadRegistros} className="btn-secondary">Refrescar</button>
+          </div>
+
+          {sesiones.length === 0 ? (
+            <p className="text-gray-600 text-center py-6">No hay sesiones registradas</p>
+          ) : (
+            <div className="space-y-4">
+              {sesiones.map((sesion, idx) => {
+                const totalRegistros = sesion.registros.length
+                const conTemperatura = sesion.registros.filter(r => r.temperatura != null).length
+                const conFertilizacion = sesion.registros.filter(r => r.fecha_fertilizacion).length
+
+                return (
+                  <div
+                    key={idx}
+                    className="border-2 border-purple-200 rounded-xl p-5 bg-gradient-to-br from-white to-purple-50/30 hover:shadow-lg transition-all duration-300 hover:border-purple-300"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-3 rounded-xl shadow-md">
+                          <Calendar className="text-white" size={24} />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">
+                            {new Date(sesion.fecha).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                          </h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                            <User size={14} />
+                            <span className="font-medium">{sesion.laboratorista}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleEditSesion(sesion)}
+                          className="btn-secondary flex items-center gap-1.5 px-3 py-2 text-sm"
+                        >
+                          <Save size={16} />
+                          <span>Editar</span>
+                        </button>
+                        <button
+                          onClick={() => navigate(`/fecundacion/${sesion.fecha}/${encodeURIComponent(sesion.laboratorista)}`)}
+                          className="btn-primary flex items-center gap-1.5 px-3 py-2 text-sm"
+                        >
+                          <Eye size={16} />
+                          <span>Ver Detalles</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSesion(sesion)}
+                          className="px-3 py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg border border-red-200 transition-colors flex items-center gap-1.5 font-medium"
+                        >
+                          <Trash2 size={16} />
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
+                        <p className="text-xs text-purple-700 font-semibold uppercase mb-1">Registros</p>
+                        <p className="text-2xl font-bold text-purple-900">{totalRegistros}</p>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 border border-red-100">
+                        <p className="text-xs text-red-700 font-semibold uppercase mb-1">Con Temperatura</p>
+                        <p className="text-2xl font-bold text-red-900">{conTemperatura}</p>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 border border-green-100">
+                        <p className="text-xs text-green-700 font-semibold uppercase mb-1">Fertilizados</p>
+                        <p className="text-2xl font-bold text-green-900">{conFertilizacion}</p>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 border border-blue-100">
+                        <p className="text-xs text-blue-700 font-semibold uppercase mb-1">Tasa</p>
+                        <p className="text-2xl font-bold text-blue-900">
+                          {totalRegistros > 0 ? ((conFertilizacion / totalRegistros) * 100).toFixed(0) : 0}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Listado individual (solo si showForm está activo) */}
+      {showForm && (
+        <div className="card">
+          <h2 className="text-xl font-semibold mb-4">Registros individuales</h2>
         {registros.length === 0 ? (
           <p className="text-gray-600">Aún no hay registros.</p>
         ) : (
@@ -283,7 +491,50 @@ export default function FecundacionPage() {
             </table>
           </div>
         )}
-      </div>
+        </div>
+      )}
+
+      {/* Modal de selección de donadora */}
+      {showDonadoraModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h3 className="text-lg font-semibold">Seleccionar donadora</h3>
+              <button onClick={() => setShowDonadoraModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Search size={16} className="text-gray-500" />
+                <input
+                  value={donadoraSearch}
+                  onChange={(e) => setDonadoraSearch(e.target.value)}
+                  className="input-field"
+                  placeholder="Buscar por nombre o registro"
+                  autoFocus
+                />
+              </div>
+              <div className="max-h-72 overflow-y-auto divide-y divide-gray-200">
+                {filteredDonadoras.length === 0 ? (
+                  <p className="text-gray-600 text-center py-6">No se encontraron donadoras</p>
+                ) : (
+                  filteredDonadoras.map((donadora) => (
+                    <button
+                      key={donadora.id}
+                      onClick={() => handleSelectDonadora(donadora)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors"
+                    >
+                      <p className="font-medium text-gray-800">{donadora.nombre}</p>
+                      <p className="text-sm text-gray-600">Registro: {donadora.numero_registro} • {donadora.raza}</p>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,14 +4,12 @@ Endpoints para gestión de donadoras
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
-from pathlib import Path
-import uuid
 from datetime import datetime
 
 from app.core.dependencies import get_db, get_current_user
-from app.core.config import settings
 from app.infrastructure.repositories.donadora_repository import DonadoraRepository
 from app.infrastructure.database.models import Donadora
+from app.infrastructure.external.uploadthing import upload_file
 from app.application.schemas.donadora_schema import (
     DonadoraCreate, DonadoraResponse, DonadoraUpdate
 )
@@ -36,32 +34,26 @@ def _parse_fecha(fecha_str: Optional[str]):
         )
 
 
-async def _save_foto(foto: UploadFile) -> str:
-    """Validar y guardar foto de donadora"""
+async def _upload_foto(foto: UploadFile) -> str:
+    """Validar y subir foto a UploadThing, devuelve URL"""
     if foto.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Formato de imagen no permitido. Usa JPG, PNG o WEBP"
         )
 
+    # UploadThing valida tamaños, pero verificamos antes para respuesta rápida
     content = await foto.read()
-    if len(content) > settings.MAX_FILE_SIZE:
+    if len(content) > 5_242_880:  # 5MB
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La imagen excede el tamaño máximo permitido (5MB)"
         )
 
-    upload_dir = Path(settings.UPLOAD_DIR) / "donadoras"
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    # Reposicionar el cursor para que UploadThing lea el archivo
+    await foto.seek(0)
 
-    file_extension = foto.filename.split(".")[-1]
-    filename = f"{uuid.uuid4()}.{file_extension}"
-    file_path = upload_dir / filename
-
-    with file_path.open("wb") as buffer:
-        buffer.write(content)
-
-    return f"/uploads/donadoras/{filename}"
+    return await upload_file(foto)
 
 
 @router.post("/", response_model=DonadoraResponse, status_code=status.HTTP_201_CREATED)
@@ -93,7 +85,7 @@ async def create_donadora(
     # Subir foto si existe
     foto_ruta = None
     if foto:
-        foto_ruta = await _save_foto(foto)
+        foto_ruta = await _upload_foto(foto)
 
     # Crear donadora
     donadora = Donadora(
@@ -208,7 +200,7 @@ async def update_donadora(
         update_data["notas"] = notas
 
     if foto:
-        update_data["foto_ruta"] = await _save_foto(foto)
+        update_data["foto_ruta"] = await _upload_foto(foto)
 
     updated = await repo.update(id, update_data)
 

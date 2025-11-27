@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # CORS
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # UploadThing
+    UPLOADTHING_TOKEN: str | None = None
+    UPLOADTHING_API_URL: str = "https://api.uploadthing.com"
+
     @property
     def cors_origins(self) -> List[str]:
         """Orígenes permitidos para CORS"""

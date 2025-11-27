@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Save, Eye, X, Trash2, Search, XCircle } from 'lucide-react'
+import { Plus, Save, Eye, X, Trash2, Search, XCircle, Calendar, User } from 'lucide-react'
 import { useOPUStore } from '../store/opuStore'
 import opuService from '../services/opuService'
 import donadoraService from '../services/donadoraService'
@@ -797,54 +797,106 @@ export default function OPUPage() {
           {sesiones.length === 0 ? (
             <p className="text-gray-600 text-center py-6">No hay sesiones registradas</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Fecha</th>
-                    <th className="px-3 py-2 text-left">Tecnico OPU</th>
-                    <th className="px-3 py-2 text-left">Cliente</th>
-                    <th className="px-3 py-2 text-left">Finalidad</th>
-                    <th className="px-3 py-2 text-left">Extracciones</th>
-                    <th className="px-3 py-2 text-left">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {sesiones.map((sesion) => (
-                    <tr key={sesion.id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        {sesion.fecha ? new Date(sesion.fecha).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-3 py-2">{sesion.tecnico_opu}</td>
-                      <td className="px-3 py-2">{sesion.cliente}</td>
-                      <td className="px-3 py-2 capitalize">{sesion.finalidad}</td>
-                      <td className="px-3 py-2">{(sesion.extracciones || sesion.extracciones_donadoras || []).length}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleEditSesion(sesion)}
-                            className="text-primary hover:text-primary-dark text-sm flex items-center gap-1"
-                          >
-                            <Save size={14} /> Editar
-                          </button>
-                          <button
-                            onClick={() => navigate(`/opu/${sesion.id}`)}
-                            className="text-gray-700 hover:text-gray-900 text-sm flex items-center gap-1"
-                          >
-                            <Eye size={14} /> Ver
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSesion(sesion.id)}
-                            className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
-                          >
-                            <Trash2 size={14} /> Eliminar
-                          </button>
+            <div className="space-y-4">
+              {sesiones.map((sesion) => {
+                const extracciones = sesion.extracciones || sesion.extracciones_donadoras || []
+                const totalExtracciones = extracciones.length
+                const totalViables = extracciones.reduce((sum, ext) => {
+                  return sum + (Number(ext.grado_1) || 0) + (Number(ext.grado_2) || 0) +
+                         (Number(ext.grado_3) || 0) + (Number(ext.desnudos) || 0)
+                }, 0)
+                const totalIrregular = extracciones.reduce((sum, ext) => sum + (Number(ext.irregular) || 0), 0)
+                const totalOvocitos = totalViables + totalIrregular
+                const tasaViabilidad = totalOvocitos > 0 ? ((totalViables / totalOvocitos) * 100).toFixed(0) : 0
+
+                return (
+                  <div
+                    key={sesion.id}
+                    className="border-2 border-blue-200 rounded-xl p-5 bg-gradient-to-br from-white to-blue-50/30 hover:shadow-lg transition-all duration-300 hover:border-blue-300"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-3 rounded-xl shadow-md">
+                          <Calendar className="text-white" size={24} />
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-bold text-gray-900">
+                              {sesion.fecha ? new Date(sesion.fecha).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Sin fecha'}
+                            </h3>
+                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
+                              ID: {sesion.id}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <User size={14} />
+                              <span className="font-medium">{sesion.tecnico_opu}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span>•</span>
+                              <span className="font-medium">{sesion.cliente}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span>•</span>
+                              <span className="capitalize bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                {sesion.finalidad}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleEditSesion(sesion)}
+                          className="btn-secondary flex items-center gap-1.5 px-3 py-2 text-sm"
+                        >
+                          <Save size={16} />
+                          <span>Editar</span>
+                        </button>
+                        <button
+                          onClick={() => navigate(`/opu/${sesion.id}`)}
+                          className="btn-primary flex items-center gap-1.5 px-3 py-2 text-sm"
+                        >
+                          <Eye size={16} />
+                          <span>Ver Detalles</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSesion(sesion.id)}
+                          className="px-3 py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg border border-red-200 transition-colors flex items-center gap-1.5 font-medium"
+                        >
+                          <Trash2 size={16} />
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className="bg-white/70 rounded-lg p-3 border border-blue-100">
+                        <p className="text-xs text-blue-700 font-semibold uppercase mb-1">Extracciones</p>
+                        <p className="text-2xl font-bold text-blue-900">{totalExtracciones}</p>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 border border-green-100">
+                        <p className="text-xs text-green-700 font-semibold uppercase mb-1">Viables</p>
+                        <p className="text-2xl font-bold text-green-900">{totalViables}</p>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 border border-red-100">
+                        <p className="text-xs text-red-700 font-semibold uppercase mb-1">Irregulares</p>
+                        <p className="text-2xl font-bold text-red-900">{totalIrregular}</p>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
+                        <p className="text-xs text-purple-700 font-semibold uppercase mb-1">Total Ovocitos</p>
+                        <p className="text-2xl font-bold text-purple-900">{totalOvocitos}</p>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 border border-indigo-100">
+                        <p className="text-xs text-indigo-700 font-semibold uppercase mb-1">Viabilidad</p>
+                        <p className="text-2xl font-bold text-indigo-900">{tasaViabilidad}%</p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
