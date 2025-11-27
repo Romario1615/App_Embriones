@@ -5,11 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from datetime import datetime
+import uuid
+from pathlib import Path
 
 from app.core.dependencies import get_db, get_current_user
 from app.infrastructure.repositories.donadora_repository import DonadoraRepository
 from app.infrastructure.database.models import Donadora
-from app.infrastructure.external.uploadthing import upload_file
 from app.application.schemas.donadora_schema import (
     DonadoraCreate, DonadoraResponse, DonadoraUpdate
 )
@@ -35,14 +36,14 @@ def _parse_fecha(fecha_str: Optional[str]):
 
 
 async def _upload_foto(foto: UploadFile) -> str:
-    """Validar y subir foto a UploadThing, devuelve URL"""
+    """Validar y guardar foto localmente; devuelve URL relativa servida en /uploads"""
     if foto.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Formato de imagen no permitido. Usa JPG, PNG o WEBP"
         )
 
-    # UploadThing valida tamaños, pero verificamos antes para respuesta rápida
+    # Validar tamaño (5MB)
     content = await foto.read()
     if len(content) > 5_242_880:  # 5MB
         raise HTTPException(
@@ -50,10 +51,19 @@ async def _upload_foto(foto: UploadFile) -> str:
             detail="La imagen excede el tamaño máximo permitido (5MB)"
         )
 
-    # Reposicionar el cursor para que UploadThing lea el archivo
-    await foto.seek(0)
+    # Guardar en /uploads/donadoras
+    uploads_dir = Path(settings.UPLOAD_DIR) / "donadoras"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
 
-    return await upload_file(foto)
+    ext = Path(foto.filename).suffix.lower() or ".jpg"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    dest_path = uploads_dir / filename
+
+    with open(dest_path, "wb") as f:
+        f.write(content)
+
+    # URL expuesta por StaticFiles en /uploads
+    return f"/uploads/donadoras/{filename}"
 
 
 @router.post("/", response_model=DonadoraResponse, status_code=status.HTTP_201_CREATED)
