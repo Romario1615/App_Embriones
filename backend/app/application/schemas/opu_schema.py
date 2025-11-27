@@ -3,6 +3,7 @@ Schemas para sesiones OPU
 """
 from pydantic import BaseModel
 from typing import Optional, List
+from pydantic import Field
 from datetime import date, datetime
 
 
@@ -57,7 +58,7 @@ class SesionOPUBase(BaseModel):
 
 
 class SesionOPUCreate(SesionOPUBase):
-    extracciones: List[ExtraccionCreate] = []
+    extracciones: List[ExtraccionCreate] = Field(default_factory=list)
 
 
 class SesionOPUUpdate(BaseModel):
@@ -78,7 +79,7 @@ class SesionOPUResponse(SesionOPUBase):
     id: int
     fecha_creacion: datetime
     usuario_creacion_id: Optional[int]
-    extracciones: List[ExtraccionResponse] = []
+    extracciones: List[ExtraccionResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
