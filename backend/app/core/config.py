@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     UPLOADTHING_TOKEN: str | None = None
     UPLOADTHING_API_URL: str = "https://api.uploadthing.com"
 
+    # Cloudinary
+    CLOUDINARY_CLOUD_NAME: str = "dwnmf6niq"
+    CLOUDINARY_API_KEY: str = "165586669561659"
+    CLOUDINARY_API_SECRET: str = "w3K08BOp-z98EIdUbfCFwvMRbds"
+
     @property
     def cors_origins(self) -> List[str]:
         """Orígenes permitidos para CORS"""

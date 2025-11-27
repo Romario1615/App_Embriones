@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Calendar, User, Phone, Scale, Edit, Trash2 } from 'lucide-react'
+import { ArrowLeft, Calendar, User, Phone, Scale, Edit, Trash2, X, ZoomIn } from 'lucide-react'
 import donadoraService from '../../services/donadoraService'
 import { useDonadoraStore } from '../../store/donadoraStore'
 import { API_BASE_URL } from '../../services/api'
@@ -10,6 +10,7 @@ export default function DonadoraDetail() {
   const navigate = useNavigate()
   const [donadora, setDonadora] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [showImageModal, setShowImageModal] = useState(false)
   const { removeDonadora } = useDonadoraStore()
 
   useEffect(() => {
@@ -107,14 +108,24 @@ export default function DonadoraDetail() {
         <div className="lg:col-span-1">
           <div className="card">
             {donadora.foto_ruta ? (
-              <img
-                src={`${API_BASE_URL.startsWith('http') ? API_BASE_URL.replace(/\/api\/v1\/?$/, '') : ''}${donadora.foto_ruta}`}
-                alt={donadora.nombre}
-                className="w-full h-auto rounded-lg mb-4"
-                onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/400x300?text=Sin+Foto'
-                }}
-              />
+              <div className="relative group">
+                <img
+                  src={donadora.foto_thumbnail || donadora.foto_ruta}
+                  alt={donadora.nombre}
+                  className="w-full h-64 object-cover rounded-lg mb-4 cursor-pointer"
+                  onClick={() => setShowImageModal(true)}
+                  onError={(e) => {
+                    e.target.src = 'https://via.placeholder.com/400x300?text=Sin+Foto'
+                  }}
+                />
+                <button
+                  onClick={() => setShowImageModal(true)}
+                  className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Ver imagen completa"
+                >
+                  <ZoomIn size={20} />
+                </button>
+              </div>
             ) : (
               <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center mb-4">
                 <p className="text-gray-500">Sin fotografía</p>
@@ -230,6 +241,37 @@ export default function DonadoraDetail() {
           </div>
         </div>
       </div>
+
+      {/* Modal de imagen completa */}
+      {showImageModal && donadora.foto_ruta && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] w-full">
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+              title="Cerrar"
+            >
+              <X size={32} />
+            </button>
+            <img
+              src={donadora.foto_ruta}
+              alt={donadora.nombre}
+              className="max-w-full max-h-[85vh] object-contain mx-auto rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+              onError={(e) => {
+                e.target.src = 'https://via.placeholder.com/800x600?text=Imagen+No+Disponible'
+              }}
+            />
+            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-4 rounded-b-lg">
+              <p className="text-lg font-semibold">{donadora.nombre}</p>
+              <p className="text-sm text-gray-300">{donadora.numero_registro}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

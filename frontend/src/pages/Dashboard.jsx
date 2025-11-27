@@ -1,11 +1,64 @@
 /**
  * Página Dashboard principal
  */
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import donadoraService from '../services/donadoraService'
+import opuService from '../services/opuService'
+import gfeService from '../services/gfeService'
 
 export default function Dashboard() {
   const user = useAuthStore(state => state.user)
+  const [stats, setStats] = useState({
+    totalDonadoras: 0,
+    sesionesOpuMes: 0,
+    tasaPrenez: 0,
+    loading: true
+  })
+
+  useEffect(() => {
+    loadStatistics()
+  }, [])
+
+  const loadStatistics = async () => {
+    try {
+      // Cargar datos en paralelo
+      const [donadoras, sesionesOpu, chequeos] = await Promise.all([
+        donadoraService.getAll().catch(() => []),
+        opuService.getAll().catch(() => []),
+        gfeService.getAll().catch(() => [])
+      ])
+
+      // Total donadoras activas
+      const totalDonadoras = (donadoras || []).filter(d => d.activo !== false).length
+
+      // Sesiones OPU del mes actual
+      const now = new Date()
+      const currentMonth = now.getMonth()
+      const currentYear = now.getFullYear()
+      const sesionesOpuMes = (sesionesOpu || []).filter(sesion => {
+        if (!sesion.fecha) return false
+        const fecha = new Date(sesion.fecha)
+        return fecha.getMonth() === currentMonth && fecha.getFullYear() === currentYear
+      }).length
+
+      // Tasa de preñez (porcentaje de preñadas vs total de chequeos)
+      const totalChequeos = (chequeos || []).length
+      const prenadas = (chequeos || []).filter(c => c.estado === 'preñada').length
+      const tasaPrenez = totalChequeos > 0 ? Math.round((prenadas / totalChequeos) * 100) : 0
+
+      setStats({
+        totalDonadoras,
+        sesionesOpuMes,
+        tasaPrenez,
+        loading: false
+      })
+    } catch (error) {
+      console.error('Error cargando estadísticas:', error)
+      setStats(prev => ({ ...prev, loading: false }))
+    }
+  }
 
   const modules = [
     {
@@ -70,25 +123,31 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Estadísticas rápidas (placeholder) */}
+      {/* Estadísticas rápidas */}
       <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-700 mb-2">
             Total Donadoras
           </h3>
-          <p className="text-4xl font-bold text-primary">-</p>
+          <p className="text-4xl font-bold text-primary">
+            {stats.loading ? '...' : stats.totalDonadoras}
+          </p>
         </div>
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-700 mb-2">
             Sesiones OPU (Este mes)
           </h3>
-          <p className="text-4xl font-bold text-blue-500">-</p>
+          <p className="text-4xl font-bold text-blue-500">
+            {stats.loading ? '...' : stats.sesionesOpuMes}
+          </p>
         </div>
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-700 mb-2">
             Tasa de Preñez
           </h3>
-          <p className="text-4xl font-bold text-teal-500">-%</p>
+          <p className="text-4xl font-bold text-teal-500">
+            {stats.loading ? '...' : `${stats.tasaPrenez}%`}
+          </p>
         </div>
       </div>
     </div>

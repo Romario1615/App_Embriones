@@ -5,11 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from datetime import datetime
-import uuid
-from pathlib import Path
 
 from app.core.config import settings
 from app.core.dependencies import get_db, get_current_user
+from app.core.cloudinary_service import upload_image, delete_image
 from app.infrastructure.repositories.donadora_repository import DonadoraRepository
 from app.infrastructure.database.models import Donadora
 from app.application.schemas.donadora_schema import (
@@ -18,9 +17,6 @@ from app.application.schemas.donadora_schema import (
 
 
 router = APIRouter()
-
-
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 def _parse_fecha(fecha_str: Optional[str]):
@@ -34,37 +30,6 @@ def _parse_fecha(fecha_str: Optional[str]):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Formato de fecha inválido. Usa YYYY-MM-DD"
         )
-
-
-async def _upload_foto(foto: UploadFile) -> str:
-    """Validar y guardar foto localmente; devuelve URL relativa servida en /uploads"""
-    if foto.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Formato de imagen no permitido. Usa JPG, PNG o WEBP"
-        )
-
-    # Validar tamaño (5MB)
-    content = await foto.read()
-    if len(content) > 5_242_880:  # 5MB
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="La imagen excede el tamaño máximo permitido (5MB)"
-        )
-
-    # Guardar en /uploads/donadoras
-    uploads_dir = Path(settings.UPLOAD_DIR) / "donadoras"
-    uploads_dir.mkdir(parents=True, exist_ok=True)
-
-    ext = Path(foto.filename).suffix.lower() or ".jpg"
-    filename = f"{uuid.uuid4().hex}{ext}"
-    dest_path = uploads_dir / filename
-
-    with open(dest_path, "wb") as f:
-        f.write(content)
-
-    # URL expuesta por StaticFiles en /uploads
-    return f"/uploads/donadoras/{filename}"
 
 
 @router.post("/", response_model=DonadoraResponse, status_code=status.HTTP_201_CREATED)
@@ -93,10 +58,15 @@ async def create_donadora(
             detail=f"Ya existe una donadora con registro {numero_registro}"
         )
 
-    # Subir foto si existe
+    # Subir foto a Cloudinary si existe
     foto_ruta = None
+    foto_thumbnail = None
+    foto_public_id = None
     if foto:
-        foto_ruta = await _upload_foto(foto)
+        cloudinary_result = await upload_image(foto, folder="donadoras")
+        foto_ruta = cloudinary_result["url"]
+        foto_thumbnail = cloudinary_result["thumbnail_url"]
+        foto_public_id = cloudinary_result["public_id"]
 
     # Crear donadora
     donadora = Donadora(
@@ -110,6 +80,8 @@ async def create_donadora(
         peso_kg=peso_kg,
         notas=notas,
         foto_ruta=foto_ruta,
+        foto_thumbnail=foto_thumbnail,
+        foto_public_id=foto_public_id,
         usuario_creacion_id=current_user.id
     )
 
@@ -189,7 +161,7 @@ async def update_donadora(
             detail="Donadora no encontrada"
         )
 
-    # Subir nueva foto si existe
+    # Subir nueva foto a Cloudinary si existe
     update_data = {}
     if nombre is not None:
         update_data["nombre"] = nombre
@@ -211,7 +183,15 @@ async def update_donadora(
         update_data["notas"] = notas
 
     if foto:
-        update_data["foto_ruta"] = await _upload_foto(foto)
+        # Eliminar foto anterior de Cloudinary si existe
+        if donadora.foto_public_id:
+            await delete_image(donadora.foto_public_id)
+
+        # Subir nueva foto
+        cloudinary_result = await upload_image(foto, folder="donadoras")
+        update_data["foto_ruta"] = cloudinary_result["url"]
+        update_data["foto_thumbnail"] = cloudinary_result["thumbnail_url"]
+        update_data["foto_public_id"] = cloudinary_result["public_id"]
 
     updated = await repo.update(id, update_data)
 

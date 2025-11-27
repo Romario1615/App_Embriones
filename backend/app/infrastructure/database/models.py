@@ -71,7 +71,9 @@ class Donadora(Base):
     fecha_nacimiento = Column(Date, nullable=True)
     propietario_nombre = Column(String(100), nullable=False)
     propietario_contacto = Column(String(100), nullable=True)
-    foto_ruta = Column(String(255), nullable=True)
+    foto_ruta = Column(String(500), nullable=True)  # URL de Cloudinary
+    foto_thumbnail = Column(String(500), nullable=True)  # URL thumbnail de Cloudinary
+    foto_public_id = Column(String(200), nullable=True)  # Public ID de Cloudinary para eliminación
     peso_kg = Column(Float, nullable=True)
     notas = Column(Text, nullable=True)
     activo = Column(Boolean, default=True, nullable=False)

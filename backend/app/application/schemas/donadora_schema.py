@@ -40,6 +40,8 @@ class DonadoraResponse(DonadoraBase):
     """Schema de respuesta de donadora"""
     id: int
     foto_ruta: Optional[str] = None
+    foto_thumbnail: Optional[str] = None
+    foto_public_id: Optional[str] = None
     activo: bool
     fecha_creacion: datetime
     fecha_actualizacion: Optional[datetime] = None
