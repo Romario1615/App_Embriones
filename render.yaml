@@ -1,0 +1,28 @@
+# Render Blueprint for backend API
+services:
+  - name: embriones-api
+    type: web
+    env: python
+    buildCommand: |
+      cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+    startCommand: |
+      cd backend && source venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: FRONTEND_URL
+        sync: false
+      - key: UPLOAD_DIR
+        value: uploads
+      - key: MAX_FILE_SIZE
+        value: "5242880"
+      - key: ENVIRONMENT
+        value: production
+      - key: UPLOADTHING_TOKEN
+        sync: false
