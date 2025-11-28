@@ -131,9 +131,15 @@ class ExtraccionDonadora(Base):
     sesion_opu_id = Column(Integer, ForeignKey("sesiones_opu.id", ondelete="CASCADE"), nullable=False)
     donadora_id = Column(Integer, ForeignKey("donadoras.id"), nullable=False)
     numero_secuencial = Column(Integer, nullable=False)
-    hora_extraccion = Column(String(10), nullable=True)
-    toro = Column(String(100), nullable=True)
+    hora_inicio = Column(String(10), nullable=True)  # Hora de inicio de extracción
+    hora_fin = Column(String(10), nullable=True)     # Hora de fin de extracción
+    toro_a = Column(String(100), nullable=True)
+    toro_b = Column(String(100), nullable=True)
     raza_toro = Column(String(50), nullable=True)
+    ct = Column(String(50), nullable=True)  # Texto corto
+    cc = Column(String(50), nullable=True)  # Texto corto
+    eo = Column(String(50), nullable=True)  # Texto corto
+    prevision_campo = Column(Integer, nullable=True)  # Numérico
 
     # Resultados de la extracción
     grado_1 = Column(Integer, default=0, nullable=False)

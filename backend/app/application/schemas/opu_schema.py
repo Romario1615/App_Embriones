@@ -9,10 +9,16 @@ from datetime import date, datetime
 
 class ExtraccionBase(BaseModel):
     numero_secuencial: int
-    hora_extraccion: Optional[str] = None
+    hora_inicio: Optional[str] = None
+    hora_fin: Optional[str] = None
     donadora_id: Optional[int] = None
-    toro: Optional[str] = None
+    toro_a: Optional[str] = None
+    toro_b: Optional[str] = None
     raza_toro: Optional[str] = None
+    ct: Optional[str] = None
+    cc: Optional[str] = None
+    eo: Optional[str] = None
+    prevision_campo: Optional[int] = None
     grado_1: int = 0
     grado_2: int = 0
     grado_3: int = 0
