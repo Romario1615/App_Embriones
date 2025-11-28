@@ -125,6 +125,12 @@ class OPURepository:
         # Devolver sesión con extracciones cargadas
         return await self._load_with_extracciones(sesion.id)
 
+    async def marcar_hora(self, sesion: SesionOPU, campo: str, valor: str) -> SesionOPU:
+        """Marcar hora de inicio o final para una sesión OPU"""
+        setattr(sesion, campo, valor)
+        await self.db.commit()
+        return await self._load_with_extracciones(sesion.id)
+
     async def delete(self, sesion: SesionOPU) -> bool:
         """Eliminar sesión"""
         await self.db.delete(sesion)

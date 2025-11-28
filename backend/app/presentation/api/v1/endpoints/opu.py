@@ -4,6 +4,7 @@ Endpoints para gestión de sesiones OPU
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+from datetime import datetime
 
 from app.core.dependencies import get_db, get_current_user
 from app.infrastructure.repositories.opu_repository import OPURepository
@@ -111,3 +112,44 @@ async def delete_sesion_opu(
         )
 
     await repo.delete(sesion)
+
+
+def _hora_actual() -> str:
+    """Hora actual en formato HH:MM"""
+    return datetime.now().strftime("%H:%M")
+
+
+@router.post("/{id}/marcar-inicio", response_model=SesionOPUResponse)
+async def marcar_inicio_opu(
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Marca la hora de inicio de la sesión OPU con la hora actual
+    """
+    repo = OPURepository(db)
+    sesion = await repo.get_by_id(id)
+    if not sesion:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesión OPU no encontrada")
+
+    updated = await repo.marcar_hora(sesion, "hora_inicio", _hora_actual())
+    return updated
+
+
+@router.post("/{id}/marcar-fin", response_model=SesionOPUResponse)
+async def marcar_fin_opu(
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Marca la hora de fin de la sesión OPU con la hora actual
+    """
+    repo = OPURepository(db)
+    sesion = await repo.get_by_id(id)
+    if not sesion:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sesión OPU no encontrada")
+
+    updated = await repo.marcar_hora(sesion, "hora_final", _hora_actual())
+    return updated

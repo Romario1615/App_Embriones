@@ -53,6 +53,8 @@ class SesionOPUBase(BaseModel):
     receptoras: Optional[str] = None
     hacienda: Optional[str] = None
     lote: Optional[str] = None
+    hora_inicio: Optional[str] = None
+    hora_final: Optional[str] = None
     finalidad: str  # 'fresco' o 'vitrificado'
     observaciones: Optional[str] = None
 
@@ -70,6 +72,8 @@ class SesionOPUUpdate(BaseModel):
     receptoras: Optional[str] = None
     hacienda: Optional[str] = None
     lote: Optional[str] = None
+    hora_inicio: Optional[str] = None
+    hora_final: Optional[str] = None
     finalidad: Optional[str] = None
     observaciones: Optional[str] = None
     extracciones: Optional[List[ExtraccionUpdate]] = None

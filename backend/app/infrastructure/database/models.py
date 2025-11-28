@@ -102,6 +102,8 @@ class SesionOPU(Base):
     receptoras = Column(String(255), nullable=True)
     hacienda = Column(String(100), nullable=True)
     lote = Column(String(50), nullable=True)
+    hora_inicio = Column(String(10), nullable=True)  # HH:MM al marcar inicio
+    hora_final = Column(String(10), nullable=True)   # HH:MM al marcar fin
     finalidad = Column(String(15), nullable=False)  # SQLite compatible: 'fresco' o 'vitrificado'
     observaciones = Column(Text, nullable=True)
 
