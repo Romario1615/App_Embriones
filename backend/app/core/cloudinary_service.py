@@ -1,8 +1,10 @@
 """
 Servicio para upload de imágenes a Cloudinary
 """
+# Updated to use cloudinary.utils
 import cloudinary
 import cloudinary.uploader
+import cloudinary.utils
 from fastapi import UploadFile, HTTPException, status
 from typing import Optional
 import uuid
@@ -69,7 +71,7 @@ async def upload_image(
         )
 
         # Generar URL optimizada para thumbnail (300x300)
-        thumbnail_url = cloudinary.url(
+        thumbnail_url, _ = cloudinary.utils.cloudinary_url(
             upload_result['public_id'],
             width=300,
             height=300,
@@ -127,7 +129,7 @@ def get_optimized_url(
     Returns:
         URL optimizada de la imagen
     """
-    return cloudinary.url(
+    url, _ = cloudinary.utils.cloudinary_url(
         public_id,
         width=width,
         height=height,
@@ -135,3 +137,4 @@ def get_optimized_url(
         quality="auto",
         fetch_format="auto"
     )
+    return url

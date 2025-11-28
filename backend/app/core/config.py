@@ -36,11 +36,14 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> List[str]:
         """Orígenes permitidos para CORS"""
-        return [
+        origins = [
             self.FRONTEND_URL,
             "http://localhost:3000",
             "http://localhost:5173",
+            "https://app-embriones.vercel.app",  # Production frontend
         ]
+        # Remove duplicates while preserving order
+        return list(dict.fromkeys(origins))
 
     # Uploads
     UPLOAD_DIR: str = "uploads"
