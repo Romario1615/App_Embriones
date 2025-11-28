@@ -166,6 +166,13 @@ async def update_donadora(
     if nombre is not None:
         update_data["nombre"] = nombre
     if numero_registro is not None:
+        # Validar que no duplique otro registro
+        existing = await repo.get_by_numero_registro(numero_registro)
+        if existing and existing.id != id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ya existe una donadora con registro {numero_registro}"
+            )
         update_data["numero_registro"] = numero_registro
     if raza is not None:
         update_data["raza"] = raza
