@@ -524,6 +524,10 @@ export default function OPUPage() {
       `
 
       const win = window.open('', '_blank')
+      if (!win || !win.document) {
+        alert('No se pudo abrir la ventana para generar el PDF. Habilita pop-ups e intenta de nuevo.')
+        return
+      }
       win.document.write(html)
       win.document.close()
       win.focus()
