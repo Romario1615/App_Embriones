@@ -15,12 +15,13 @@ export default function TransferenciaDetail() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [donadorasData, todasTransferencias] = await Promise.all([
-          donadoraService.getAll(),
+        const [donadorasResponse, todasTransferencias] = await Promise.all([
+          donadoraService.getAll({ limit: 1000 }),
           transferenciaService.getAll()
         ])
 
-        setDonadoras(donadorasData || [])
+        const donadorasList = donadorasResponse.donadoras || []
+        setDonadoras(donadorasList)
 
         // Filtrar transferencias por fecha de creación
         const filtradas = (todasTransferencias || []).filter(t => {
@@ -30,7 +31,7 @@ export default function TransferenciaDetail() {
 
         // Mapear donadoras a transferencias
         const mappedTransferencias = filtradas.map(trans => {
-          const donadora = (donadorasData || []).find(d => d.id === trans.donadora_id)
+          const donadora = donadorasList.find(d => d.id === trans.donadora_id)
           return { ...trans, donadora: donadora || null }
         })
 

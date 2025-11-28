@@ -24,14 +24,14 @@ export default function Dashboard() {
   const loadStatistics = async () => {
     try {
       // Cargar datos en paralelo
-      const [donadoras, sesionesOpu, chequeos] = await Promise.all([
-        donadoraService.getAll().catch(() => []),
+      const [donadorasData, sesionesOpu, chequeos] = await Promise.all([
+        donadoraService.getStatistics().catch(() => ({ total_activas: 0 })),
         opuService.getAll().catch(() => []),
         gfeService.getAll().catch(() => [])
       ])
 
-      // Total donadoras activas
-      const totalDonadoras = (donadoras || []).filter(d => d.activo !== false).length
+      // Total donadoras activas (usar las estadísticas del backend)
+      const totalDonadoras = donadorasData.total_activas || 0
 
       // Sesiones OPU del mes actual
       const now = new Date()

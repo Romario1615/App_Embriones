@@ -28,8 +28,9 @@ export default function TransferenciaPage() {
 
   const preloadDonadoras = async () => {
     try {
-      const data = await donadoraService.getAll()
-      const map = data.reduce((acc, d) => ({ ...acc, [d.id]: d }), {})
+      const response = await donadoraService.getAll({ limit: 1000 })
+      const donadoras = response.donadoras || []
+      const map = donadoras.reduce((acc, d) => ({ ...acc, [d.id]: d }), {})
       setDonadorasMap(map)
     } catch (error) {
       console.error('Error cargando donadoras', error)
@@ -38,8 +39,9 @@ export default function TransferenciaPage() {
 
   const loadDonadoras = async () => {
     try {
-      const data = await donadoraService.getAll()
-      setDonadorasList((data || []).filter(d => d.activo !== false))
+      const response = await donadoraService.getAll({ limit: 1000, activo: true })
+      const donadoras = response.donadoras || []
+      setDonadorasList(donadoras)
     } catch (error) {
       console.error('Error cargando donadoras:', error)
     }

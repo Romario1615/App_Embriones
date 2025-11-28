@@ -1,417 +1,244 @@
 /**
- * Página de gestión de donadoras con autosave
+ * Página de gestión de donadoras con dashboard, filtros y paginación
  */
-import { useState, useEffect, useRef } from 'react'
-import { useForm } from 'react-hook-form'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Save, Eye, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Eye, RefreshCw, Edit } from 'lucide-react'
 import { useDonadoraStore } from '../../store/donadoraStore'
-import { useAutosave } from '../../hooks/useAutosave'
 import donadoraService from '../../services/donadoraService'
-import draftService from '../../services/draftService'
-import fotoService from '../../services/fotoService'
-import PhotoCapture from '../../components/PhotoCapture'
+import DonadoraStats from '../../components/donadoras/DonadoraStats'
+import DonadoraFilters from '../../components/donadoras/DonadoraFilters'
+import Pagination from '../../components/donadoras/Pagination'
 
 export default function DonadorasPage() {
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const { register, handleSubmit, formState: { errors }, watch, reset } = useForm()
-  const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(false)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-  const isSubmittingRef = useRef(false)
 
-  const { donadoras, addDonadora, setDonadoras, updateDonadora } = useDonadoraStore()
-
-  const formData = watch()
-
-  // Autosave cada 3 segundos
-  useAutosave('donadora', 'create', formData, showForm)
+  const {
+    donadoras,
+    setPaginationData,
+    currentPage,
+    totalPages,
+    totalDonadoras,
+    limit,
+    filters,
+    setFilters,
+    setPage,
+    statistics,
+    setStatistics
+  } = useDonadoraStore()
 
   useEffect(() => {
-    loadDonadoras()
-    loadDraft()
+    loadStatistics()
+  }, [])
 
-    // Detectar si viene parámetro de edición
-    const editId = searchParams.get('edit')
-    if (editId) {
-      loadDonadoraForEdit(editId)
+  // Recargar donadoras cuando cambien filtros o página
+  useEffect(() => {
+    loadDonadoras()
+  }, [filters, currentPage])
+
+  const loadStatistics = async () => {
+    try {
+      const stats = await donadoraService.getStatistics()
+      setStatistics(stats)
+    } catch (error) {
+      console.error('Error cargando estadísticas:', error)
     }
-  }, [searchParams])
+  }
 
   const loadDonadoras = async () => {
     try {
-      const data = await donadoraService.getAll()
-      // Mostrar solo activas (soft delete marca activo=false)
-      setDonadoras(data.filter(d => d.activo))
+      setLoading(true)
+      const params = {
+        skip: (currentPage - 1) * limit,
+        limit: limit,
+        ...(filters.activo !== null && { activo: filters.activo }),
+        ...(filters.raza && { raza: filters.raza }),
+        ...(filters.tipo_ganado && { tipo_ganado: filters.tipo_ganado }),
+        ...(filters.propietario_nombre && { propietario_nombre: filters.propietario_nombre }),
+        ...(filters.search && { q: filters.search })
+      }
+
+      const data = await donadoraService.getAll(params)
+      setPaginationData(data)
     } catch (error) {
       console.error('Error cargando donadoras:', error)
-    }
-  }
-
-  const loadDraft = async () => {
-    try {
-      const drafts = await draftService.getUserDrafts('donadora', 'create')
-      if (drafts.length > 0) {
-        const draft = drafts[0]
-        reset(draft.datos_json)
-        console.log('✅ Draft recuperado')
-      }
-    } catch (error) {
-      console.error('Error cargando draft:', error)
-    }
-  }
-
-  const loadDonadoraForEdit = async (id) => {
-    try {
-      const data = await donadoraService.getById(id)
-      setEditingId(parseInt(id))
-
-      // Only reset with editable fields
-      const editableData = {
-        nombre: data.nombre || '',
-        numero_registro: data.numero_registro || '',
-        raza: data.raza || '',
-        tipo_ganado: data.tipo_ganado || '',
-        propietario_nombre: data.propietario_nombre || '',
-        fecha_nacimiento: data.fecha_nacimiento || '',
-        propietario_contacto: data.propietario_contacto || '',
-        peso_kg: data.peso_kg || '',
-        notas: data.notas || ''
-      }
-
-      reset(editableData)
-
-      // Cargar fotos existentes
-      try {
-        const fotosData = await fotoService.getByEntidad('donadora', parseInt(id))
-        const fotosFormateadas = fotosData.fotos.map(foto => ({
-          id: foto.id,
-          preview: foto.thumbnail_url || foto.url,
-          url: foto.url,
-          name: `Foto ${foto.orden + 1}`,
-          existente: true,
-          fotoId: foto.id
-        }))
-        setPhotos(fotosFormateadas)
-      } catch (error) {
-        console.log('No hay fotos para esta donadora o error cargando:', error)
-        setPhotos([])
-      }
-
-      setShowForm(true)
-    } catch (error) {
-      console.error('Error cargando donadora para editar:', error)
-      alert('Error al cargar la donadora')
-    }
-  }
-
-  const onSubmit = async (data) => {
-    // Prevenir envíos concurrentes (doble clic)
-    if (isSubmittingRef.current) {
-      console.warn('Ya hay un envío en progreso, ignorando...')
-      return
-    }
-
-    isSubmittingRef.current = true
-    setLoading(true)
-    try {
-      // Normalizar payload evitando strings vacíos y convirtiendo números
-      const payload = { ...data }
-      if (!payload.fecha_nacimiento) delete payload.fecha_nacimiento
-      if (!payload.propietario_contacto) delete payload.propietario_contacto
-      if (!payload.notas) delete payload.notas
-      if (payload.peso_kg === '' || payload.peso_kg === null || payload.peso_kg === undefined) {
-        delete payload.peso_kg
-      } else {
-        payload.peso_kg = parseFloat(payload.peso_kg)
-      }
-
-      let donadoraId = editingId
-
-      if (editingId) {
-        // Actualizar donadora existente
-        const updated = await donadoraService.update(editingId, payload)
-        updateDonadora(editingId, updated)
-      } else {
-        // Crear nueva donadora
-        const created = await donadoraService.create(payload)
-        addDonadora(created)
-        donadoraId = created.id
-
-        // Eliminar draft
-        const drafts = await draftService.getUserDrafts('donadora', 'create')
-        if (drafts.length > 0) {
-          await draftService.delete(drafts[0].id)
-        }
-      }
-
-      // Manejar fotos
-      // 1. Separar fotos nuevas de existentes
-      const fotosNuevas = photos.filter(p => !p.existente && p.file)
-      const fotosExistentes = photos.filter(p => p.existente)
-
-      // 2. Si estamos editando, eliminar fotos que fueron removidas
-      if (editingId) {
-        try {
-          const fotosActuales = await fotoService.getByEntidad('donadora', donadoraId)
-          const fotosIdExistentes = fotosExistentes.map(f => f.fotoId)
-
-          // Eliminar las que ya no están
-          for (const foto of fotosActuales.fotos) {
-            if (!fotosIdExistentes.includes(foto.id)) {
-              await fotoService.delete(foto.id)
-            }
-          }
-        } catch (error) {
-          console.error('Error eliminando fotos:', error)
-        }
-      }
-
-      // 3. Subir fotos nuevas
-      if (fotosNuevas.length > 0) {
-        try {
-          for (let i = 0; i < fotosNuevas.length; i++) {
-            const foto = fotosNuevas[i]
-            const orden = fotosExistentes.length + i
-            await fotoService.upload('donadora', donadoraId, foto.file, orden)
-          }
-        } catch (error) {
-          console.error('Error subiendo fotos:', error)
-          alert('Donadora guardada, pero hubo un error al subir algunas fotos')
-        }
-      }
-
-      alert(editingId ? 'Donadora actualizada exitosamente' : 'Donadora creada exitosamente')
-      handleCancelEdit()
-    } catch (error) {
-      console.error('Error:', error)
-      const detail = error.response?.data?.detail
-      const message = Array.isArray(detail)
-        ? detail.map(d => (d.msg || d.detail || JSON.stringify(d))).join(' | ')
-        : (detail || error.message)
-      alert('Error al guardar donadora: ' + message)
     } finally {
       setLoading(false)
-      isSubmittingRef.current = false
     }
   }
 
-  const handleCancelEdit = () => {
-    reset()
-    setPhotos([])
-    setShowForm(false)
-    setEditingId(null)
-    setSearchParams({})  // Limpiar parámetros de URL
+  const handleApplyFilters = (newFilters) => {
+    setFilters(newFilters)
+  }
+
+  const handlePageChange = (page) => {
+    setPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleExportCSV = async () => {
+    try {
+      await donadoraService.exportCSV(filters.activo)
+      alert('CSV exportado exitosamente')
+    } catch (error) {
+      console.error('Error exportando CSV:', error)
+      alert('Error al exportar CSV')
+    }
+  }
+
+  const handleRefreshStats = async () => {
+    await loadStatistics()
+    await loadDonadoras()
+  }
+
+  const handleNewDonadora = () => {
+    navigate('/donadoras/new')
   }
 
   return (
     <div>
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">
           Gestión de Donadoras
         </h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <Plus size={20} />
-          <span>Nueva Donadora</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleRefreshStats}
+            className="btn-secondary flex items-center space-x-2"
+            title="Actualizar estadísticas"
+          >
+            <RefreshCw size={18} />
+            <span className="hidden md:inline">Actualizar</span>
+          </button>
+          <button
+            onClick={handleNewDonadora}
+            className="btn-primary flex items-center space-x-2"
+          >
+            <Plus size={20} />
+            <span>Nueva Donadora</span>
+          </button>
+        </div>
       </div>
 
-      {/* Formulario */}
-      {showForm && (
-        <div className="card mb-6">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? 'Editar Donadora' : 'Registrar Nueva Donadora'}
-          </h2>
-          <p className="text-sm text-gray-600 mb-4">
-            ℹ️ Los cambios se guardan automáticamente cada 3 segundos
-          </p>
+      {/* Dashboard de Estadísticas */}
+      <DonadoraStats statistics={statistics} />
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre *
-                </label>
-                <input
-                  {...register('nombre', { required: 'Nombre requerido' })}
-                  className="input-field"
-                  placeholder="Ej: Vaca Estrella"
-                />
-                {errors.nombre && (
-                  <p className="text-red-500 text-sm mt-1">{errors.nombre.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Número de Registro *
-                </label>
-                <input
-                  {...register('numero_registro', { required: 'Número requerido' })}
-                  className="input-field"
-                  placeholder="Ej: 56784"
-                />
-                {errors.numero_registro && (
-                  <p className="text-red-500 text-sm mt-1">{errors.numero_registro.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Raza *
-                </label>
-                <select {...register('raza', { required: true })} className="input-field">
-                  <option value="">Seleccionar</option>
-                  <option value="Holstein">Holstein</option>
-                  <option value="Angus">Angus</option>
-                  <option value="Brahman">Brahman</option>
-                  <option value="Jersey">Jersey</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo de Ganado *
-                </label>
-                <select {...register('tipo_ganado', { required: true })} className="input-field">
-                  <option value="">Seleccionar</option>
-                  <option value="carne">Carne</option>
-                  <option value="leche">Leche</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre del Propietario *
-                </label>
-                <input
-                  {...register('propietario_nombre', { required: true })}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Contacto del Propietario
-                </label>
-                <input {...register('propietario_contacto')} className="input-field" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Peso (kg)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('peso_kg')}
-                  className="input-field"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fotografías (hasta 6)
-                </label>
-                <PhotoCapture
-                  photos={photos}
-                  onChange={setPhotos}
-                  maxPhotos={6}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notas Adicionales
-              </label>
-              <textarea {...register('notas')} className="input-field" rows={3} />
-            </div>
-
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary flex items-center space-x-2 disabled:opacity-50"
-              >
-                <Save size={20} />
-                <span>
-                  {loading ? 'Guardando...' : editingId ? 'Actualizar Donadora' : 'Guardar Donadora'}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                className="btn-secondary"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* Filtros de búsqueda */}
+      <DonadoraFilters
+        filters={filters}
+        onApplyFilters={handleApplyFilters}
+        onExportCSV={handleExportCSV}
+        loading={loading}
+      />
 
       {/* Lista de Donadoras */}
       <div className="card">
-        <h2 className="text-xl font-semibold mb-4">Donadoras Registradas</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          Donadoras Registradas
+          {totalDonadoras > 0 && (
+            <span className="ml-2 text-sm font-normal text-gray-600">
+              ({totalDonadoras} total)
+            </span>
+          )}
+        </h2>
 
-        {donadoras.length === 0 ? (
-          <p className="text-gray-600 text-center py-8">
-            No hay donadoras registradas. Crea una nueva para comenzar.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Nombre
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Registro
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Raza
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Tipo
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Propietario
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {donadoras.map(donadora => (
-                  <tr key={donadora.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap">{donadora.nombre}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{donadora.numero_registro}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{donadora.raza}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{donadora.tipo_ganado}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{donadora.propietario_nombre}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <button
-                        onClick={() => navigate(`/donadoras/${donadora.id}`)}
-                        className="flex items-center space-x-1 text-primary hover:text-primary-dark transition-colors"
-                        title="Ver ficha completa"
-                      >
-                        <Eye size={18} />
-                        <span className="text-sm">Ver detalle</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {loading ? (
+          <div className="text-center py-12">
+            <RefreshCw className="animate-spin mx-auto mb-4 text-primary" size={40} />
+            <p className="text-gray-600">Cargando donadoras...</p>
           </div>
+        ) : donadoras.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">
+              {filters.search || filters.raza || filters.tipo_ganado || filters.propietario_nombre
+                ? 'No se encontraron donadoras con los filtros aplicados.'
+                : 'No hay donadoras registradas. Crea una nueva para comenzar.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Nombre
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Registro
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Raza
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Tipo
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Propietario
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Estado
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {donadoras.map(donadora => (
+                    <tr key={donadora.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap font-medium">{donadora.nombre}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{donadora.numero_registro}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{donadora.raza}</td>
+                      <td className="px-4 py-3 whitespace-nowrap capitalize">{donadora.tipo_ganado}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{donadora.propietario_nombre}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          donadora.activo
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {donadora.activo ? 'Activa' : 'Inactiva'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => navigate(`/donadoras/${donadora.id}/edit`)}
+                            className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 transition-colors"
+                            title="Editar donadora"
+                          >
+                            <Edit size={16} />
+                            <span className="text-sm">Editar</span>
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <button
+                            onClick={() => navigate(`/donadoras/${donadora.id}`)}
+                            className="flex items-center space-x-1 text-primary hover:text-primary-dark transition-colors"
+                            title="Ver ficha completa"
+                          >
+                            <Eye size={16} />
+                            <span className="text-sm">Ver</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Paginación */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalDonadoras}
+              limit={limit}
+              onPageChange={handlePageChange}
+            />
+          </>
         )}
       </div>
     </div>

@@ -15,12 +15,13 @@ export default function FecundacionDetail() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [donadorasData, todosRegistros] = await Promise.all([
-          donadoraService.getAll(),
+        const [donadorasResponse, todosRegistros] = await Promise.all([
+          donadoraService.getAll({ limit: 1000 }),
           fecundacionService.getAll()
         ])
 
-        setDonadoras(donadorasData || [])
+        const donadorasList = donadorasResponse.donadoras || []
+        setDonadoras(donadorasList)
 
         // Filtrar registros por fecha y laboratorista
         const filtrados = (todosRegistros || []).filter(r => {
@@ -31,7 +32,7 @@ export default function FecundacionDetail() {
 
         // Mapear donadoras a registros
         const mappedRegistros = filtrados.map(reg => {
-          const donadora = (donadorasData || []).find(d => d.id === reg.donadora_id)
+          const donadora = donadorasList.find(d => d.id === reg.donadora_id)
           return { ...reg, donadora: donadora || null }
         })
 

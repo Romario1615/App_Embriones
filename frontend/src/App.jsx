@@ -4,6 +4,8 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import DonadorasPage from './pages/donadoras/DonadorasPage'
 import DonadoraDetail from './pages/donadoras/DonadoraDetail'
+import DonadoraEdit from './pages/donadoras/DonadoraEdit'
+import DonadoraCreate from './pages/donadoras/DonadoraCreate'
 import OPUPage from './pages/OPUPage'
 import OPUDetail from './pages/OPUDetail'
 import FecundacionPage from './pages/FecundacionPage'
@@ -50,6 +52,18 @@ function App() {
         <Route path="/donadoras" element={
           <ProtectedRoute>
             <DonadorasPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/donadoras/new" element={
+          <ProtectedRoute>
+            <DonadoraCreate />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/donadoras/:id/edit" element={
+          <ProtectedRoute>
+            <DonadoraEdit />
           </ProtectedRoute>
         } />
 

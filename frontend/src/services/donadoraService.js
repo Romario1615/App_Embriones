@@ -5,11 +5,55 @@ import api from './api'
 
 const donadoraService = {
   /**
-   * Obtener todas las donadoras
+   * Obtener todas las donadoras con filtros y paginación
    */
-  async getAll() {
-    const response = await api.get('/donadoras/')
+  async getAll(params = {}) {
+    const response = await api.get('/donadoras/', { params })
     return response.data
+  },
+
+  /**
+   * Obtener estadísticas de donadoras
+   */
+  async getStatistics() {
+    const response = await api.get('/donadoras/stats')
+    return response.data
+  },
+
+  /**
+   * Exportar donadoras a CSV
+   */
+  async exportCSV(activo = null) {
+    const params = {}
+    if (activo !== null) {
+      params.activo = activo
+    }
+
+    const response = await api.get('/donadoras/export/csv', {
+      params,
+      responseType: 'blob'
+    })
+
+    // Crear un enlace temporal para descargar el archivo
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+
+    // Obtener el nombre del archivo del header o usar uno por defecto
+    const contentDisposition = response.headers['content-disposition']
+    let filename = 'donadoras.csv'
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/)
+      if (filenameMatch) {
+        filename = filenameMatch[1]
+      }
+    }
+
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
   },
 
   /**
@@ -62,7 +106,8 @@ const donadoraService = {
     // Añadir todos los campos
     Object.keys(data).forEach(key => {
       const value = data[key]
-      if (value !== null && value !== undefined && value !== '') {
+      // Permitir booleanos (incluido false) y otros valores que no sean null, undefined o string vacío
+      if (value !== null && value !== undefined && value !== '' || typeof value === 'boolean') {
         formData.append(key, value)
       }
     })

@@ -28,18 +28,19 @@ export default function OPUDetail() {
     const load = async () => {
       try {
         // Cargar donadoras y sesión en paralelo
-        const [donadorasData, sesionData] = await Promise.all([
-          donadoraService.getAll(),
+        const [donadorasResponse, sesionData] = await Promise.all([
+          donadoraService.getAll({ limit: 1000 }),
           opuService.getById(id)
         ])
 
-        setDonadoras(donadorasData || [])
+        const donadorasList = donadorasResponse.donadoras || []
+        setDonadoras(donadorasList)
 
         // Mapear las extracciones con los nombres de donadoras
         if (sesionData.extracciones || sesionData.extracciones_donadoras) {
           const extrList = sesionData.extracciones || sesionData.extracciones_donadoras
           const mappedExtr = extrList.map(ext => {
-            const donadora = (donadorasData || []).find(d => d.id === ext.donadora_id)
+            const donadora = donadorasList.find(d => d.id === ext.donadora_id)
             return {
               ...ext,
               donadora: donadora || null

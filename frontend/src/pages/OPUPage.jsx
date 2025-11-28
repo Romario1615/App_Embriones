@@ -78,9 +78,10 @@ export default function OPUPage() {
 
   const loadDonadoras = async () => {
     try {
-      const data = await donadoraService.getAll()
-      setDonadorasList((data || []).filter(d => d.activo !== false))
-      return data || []
+      const response = await donadoraService.getAll({ limit: 1000, activo: true })
+      const donadoras = response.donadoras || []
+      setDonadorasList(donadoras)
+      return donadoras
     } catch (error) {
       console.error('Error cargando donadoras:', error)
       return []
@@ -449,6 +450,15 @@ export default function OPUPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Lote</label>
                       <input {...register('lote')} className="input-field" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Receptoras</label>
+                      <input
+                        type="number"
+                        {...register('receptoras')}
+                        className="input-field"
+                        placeholder="Número de receptoras"
+                      />
                     </div>
                   </div>
 

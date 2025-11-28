@@ -67,7 +67,7 @@ export default function DonadoraDetail() {
   }
 
   const handleEdit = () => {
-    navigate(`/donadoras?edit=${id}`)
+    navigate(`/donadoras/${id}/edit`)
   }
 
   if (loading) {
