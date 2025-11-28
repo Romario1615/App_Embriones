@@ -8,11 +8,17 @@ import donadoraService from '../services/donadoraService'
 
 const emptyExtraccion = {
   numero_secuencial: 1,
-  hora_extraccion: '',
+  hora_inicio: '',
+  hora_fin: '',
   donadora: null,
   donadora_id: null,
-  toro: '',
+  toro_a: '',
+  toro_b: '',
   raza_toro: '',
+  ct: '',
+  cc: '',
+  eo: '',
+  prevision_campo: '',
   grado_1: 0,
   grado_2: 0,
   grado_3: 0,
@@ -47,7 +53,7 @@ export default function OPUPage() {
   const [sessionCollapsed, setSessionCollapsed] = useState(false)
   const isSubmittingRef = useRef(false)
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
     defaultValues: {
       fecha: '',
       tecnico_opu: '',
@@ -56,8 +62,11 @@ export default function OPUPage() {
       medio: '',
       hacienda: '',
       lote: '',
+      hora_inicio: '',
+      hora_final: '',
       finalidad: 'fresco',
-      observaciones: ''
+      observaciones: '',
+      receptoras: ''
     }
   })
   const formValues = watch()
@@ -154,9 +163,15 @@ export default function OPUPage() {
 
     const newRow = {
       numero_secuencial: Number(extrForm.numero_secuencial) || extracciones.length + 1,
-      hora_extraccion: extrForm.hora_extraccion || '',
-      toro: extrForm.toro || '',
+      hora_inicio: extrForm.hora_inicio || '',
+      hora_fin: extrForm.hora_fin || '',
+      toro_a: extrForm.toro_a || '',
+      toro_b: extrForm.toro_b || '',
       raza_toro: extrForm.raza_toro || '',
+      ct: extrForm.ct || '',
+      cc: extrForm.cc || '',
+      eo: extrForm.eo || '',
+      prevision_campo: extrForm.prevision_campo || '',
       grado_1: Number(extrForm.grado_1) || 0,
       grado_2: Number(extrForm.grado_2) || 0,
       grado_3: Number(extrForm.grado_3) || 0,
@@ -209,9 +224,15 @@ export default function OPUPage() {
       const found = donas.find(d => d.id === ext.donadora_id)
       return {
         numero_secuencial: ext.numero_secuencial || idx + 1,
-        hora_extraccion: ext.hora_extraccion || '',
-        toro: ext.toro || '',
+        hora_inicio: ext.hora_inicio || '',
+        hora_fin: ext.hora_fin || '',
+        toro_a: ext.toro_a || '',
+        toro_b: ext.toro_b || '',
         raza_toro: ext.raza_toro || '',
+        ct: ext.ct || '',
+        cc: ext.cc || '',
+        eo: ext.eo || '',
+        prevision_campo: ext.prevision_campo || '',
         grado_1: ext.grado_1 ?? 0,
         grado_2: ext.grado_2 ?? 0,
         grado_3: ext.grado_3 ?? 0,
@@ -286,9 +307,15 @@ export default function OPUPage() {
         extracciones: extracciones.map((ext) => {
           const base = {
             numero_secuencial: Number(ext.numero_secuencial) || 0,
-            hora_extraccion: ext.hora_extraccion || null,
-            toro: ext.toro?.trim() || null,
+            hora_inicio: ext.hora_inicio || null,
+            hora_fin: ext.hora_fin || null,
+            toro_a: ext.toro_a?.trim() || null,
+            toro_b: ext.toro_b?.trim() || null,
             raza_toro: ext.raza_toro?.trim() || null,
+            ct: ext.ct?.trim() || null,
+            cc: ext.cc?.trim() || null,
+            eo: ext.eo?.trim() || null,
+            prevision_campo: ext.prevision_campo ? Number(ext.prevision_campo) : null,
             grado_1: Number(ext.grado_1) || 0,
             grado_2: Number(ext.grado_2) || 0,
             grado_3: Number(ext.grado_3) || 0,
@@ -367,7 +394,7 @@ export default function OPUPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Modulo OPU</h1>
@@ -462,6 +489,55 @@ export default function OPUPage() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Hora inicio</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="time"
+                          {...register('hora_inicio')}
+                          className="input-field flex-1"
+                          placeholder="HH:MM"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const now = new Date()
+                            const hours = String(now.getHours()).padStart(2, '0')
+                            const minutes = String(now.getMinutes()).padStart(2, '0')
+                            setValue('hora_inicio', `${hours}:${minutes}`)
+                          }}
+                          className="btn-secondary whitespace-nowrap"
+                        >
+                          Hora actual
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Hora final</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="time"
+                          {...register('hora_final')}
+                          className="input-field flex-1"
+                          placeholder="HH:MM"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const now = new Date()
+                            const hours = String(now.getHours()).padStart(2, '0')
+                            const minutes = String(now.getMinutes()).padStart(2, '0')
+                            setValue('hora_final', `${hours}:${minutes}`)
+                          }}
+                          className="btn-secondary whitespace-nowrap"
+                        >
+                          Hora actual
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
                     <textarea {...register('observaciones')} className="input-field" rows={3} />
@@ -542,21 +618,70 @@ export default function OPUPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hora</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hora inicio</label>
+                <div className="flex gap-2">
+                  <input
+                    type="time"
+                    value={extrForm.hora_inicio}
+                    onChange={(e) => setExtrForm({ ...extrForm, hora_inicio: e.target.value })}
+                    className="input-field flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date()
+                      const hours = String(now.getHours()).padStart(2, '0')
+                      const minutes = String(now.getMinutes()).padStart(2, '0')
+                      setExtrForm({ ...extrForm, hora_inicio: `${hours}:${minutes}` })
+                    }}
+                    className="btn-secondary whitespace-nowrap"
+                  >
+                    Ahora
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hora fin</label>
+                <div className="flex gap-2">
+                  <input
+                    type="time"
+                    value={extrForm.hora_fin}
+                    onChange={(e) => setExtrForm({ ...extrForm, hora_fin: e.target.value })}
+                    className="input-field flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date()
+                      const hours = String(now.getHours()).padStart(2, '0')
+                      const minutes = String(now.getMinutes()).padStart(2, '0')
+                      setExtrForm({ ...extrForm, hora_fin: `${hours}:${minutes}` })
+                    }}
+                    className="btn-secondary whitespace-nowrap"
+                  >
+                    Ahora
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Toro A</label>
                 <input
-                  type="time"
-                  value={extrForm.hora_extraccion}
-                  onChange={(e) => setExtrForm({ ...extrForm, hora_extraccion: e.target.value })}
+                  value={extrForm.toro_a}
+                  onChange={(e) => setExtrForm({ ...extrForm, toro_a: e.target.value })}
                   className="input-field"
+                  placeholder="Nombre o código"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Toro</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Toro B</label>
                 <input
-                  value={extrForm.toro}
-                  onChange={(e) => setExtrForm({ ...extrForm, toro: e.target.value })}
+                  value={extrForm.toro_b}
+                  onChange={(e) => setExtrForm({ ...extrForm, toro_b: e.target.value })}
                   className="input-field"
-                  placeholder="Nombre o codigo"
+                  placeholder="Nombre o código"
                 />
               </div>
               <div>
@@ -565,6 +690,46 @@ export default function OPUPage() {
                   value={extrForm.raza_toro}
                   onChange={(e) => setExtrForm({ ...extrForm, raza_toro: e.target.value })}
                   className="input-field"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CT</label>
+                <input
+                  value={extrForm.ct}
+                  onChange={(e) => setExtrForm({ ...extrForm, ct: e.target.value })}
+                  className="input-field"
+                  placeholder="CT"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CC</label>
+                <input
+                  value={extrForm.cc}
+                  onChange={(e) => setExtrForm({ ...extrForm, cc: e.target.value })}
+                  className="input-field"
+                  placeholder="CC"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">EO</label>
+                <input
+                  value={extrForm.eo}
+                  onChange={(e) => setExtrForm({ ...extrForm, eo: e.target.value })}
+                  className="input-field"
+                  placeholder="EO"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Previsión campo</label>
+                <input
+                  type="number"
+                  value={extrForm.prevision_campo}
+                  onChange={(e) => setExtrForm({ ...extrForm, prevision_campo: e.target.value })}
+                  className="input-field"
+                  placeholder="0"
                 />
               </div>
             </div>
@@ -744,9 +909,10 @@ export default function OPUPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left">#</th>
-                      <th className="px-3 py-2 text-left">Hora</th>
+                      <th className="px-3 py-2 text-left">H.Inicio</th>
+                      <th className="px-3 py-2 text-left">H.Fin</th>
                       <th className="px-3 py-2 text-left">Donadora</th>
-                      <th className="px-3 py-2 text-left">Toro</th>
+                      <th className="px-3 py-2 text-left">Toros</th>
                       <th className="px-3 py-2 text-left">GI</th>
                       <th className="px-3 py-2 text-left">GII</th>
                       <th className="px-3 py-2 text-left">GIII</th>
@@ -760,7 +926,8 @@ export default function OPUPage() {
                     {extracciones.map((ext, idx) => (
                       <tr key={idx} className="hover:bg-gray-50">
                         <td className="px-3 py-2">{ext.numero_secuencial}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{ext.hora_extraccion || '-'}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{ext.hora_inicio || '-'}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{ext.hora_fin || '-'}</td>
                         <td className="px-3 py-2">
                           {ext.nueva
                             ? '(Nueva donadora)'
@@ -768,9 +935,13 @@ export default function OPUPage() {
                               ? `${ext.donadora.nombre} (${ext.donadora.numero_registro})`
                               : `ID ${ext.donadora_id}`}
                         </td>
-                        <td className="px-3 py-2">
-                          {ext.toro || '-'}
-                          {ext.raza_toro ? ` / ${ext.raza_toro}` : ''}
+                        <td className="px-3 py-2 text-xs">
+                          {ext.toro_a || ext.toro_b ? (
+                            <>
+                              {ext.toro_a && <div>A: {ext.toro_a}</div>}
+                              {ext.toro_b && <div>B: {ext.toro_b}</div>}
+                            </>
+                          ) : '-'}
                         </td>
                         <td className="px-3 py-2">{ext.grado_1}</td>
                         <td className="px-3 py-2">{ext.grado_2}</td>

@@ -164,7 +164,7 @@ export default function DonadoraEdit() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Header */}
       <div className="mb-6">
         <button

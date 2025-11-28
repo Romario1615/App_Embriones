@@ -99,7 +99,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Bienvenida */}
       <div className="mb-8">
         <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">

@@ -86,7 +86,7 @@ export default function DonadoraCreate() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Header */}
       <div className="mb-6">
         <button

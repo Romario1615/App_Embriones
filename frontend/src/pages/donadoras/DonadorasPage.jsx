@@ -97,7 +97,7 @@ export default function DonadorasPage() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">

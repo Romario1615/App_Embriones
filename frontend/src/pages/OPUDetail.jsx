@@ -194,7 +194,7 @@ export default function OPUDetail() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-fade-in">
       <button
         onClick={() => navigate('/opu')}
         className="flex items-center text-gray-600 hover:text-gray-800"

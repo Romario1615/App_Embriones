@@ -128,7 +128,7 @@ export default function GFEDetail() {
   const primerChequeo = chequeos[0]
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-fade-in">
       <button
         onClick={() => navigate('/gfe')}
         className="flex items-center text-gray-600 hover:text-gray-800"
