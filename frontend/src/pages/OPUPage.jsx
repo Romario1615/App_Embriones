@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Save, Eye, X, Trash2, Search, XCircle, Calendar, User } from 'lucide-react'
+import { Plus, Save, Eye, X, Trash2, Search, XCircle, Calendar, User, FileText } from 'lucide-react'
 import { useOPUStore } from '../store/opuStore'
 import opuService from '../services/opuService'
 import donadoraService from '../services/donadoraService'
@@ -37,6 +37,22 @@ const calcTotalViables = (ext) =>
   (Number(ext.grado_2) || 0) +
   (Number(ext.grado_3) || 0) +
   (Number(ext.desnudos) || 0)
+
+const getDonadoraLabel = (ext, donas = []) => {
+  const byId = donas.find(d => d.id === ext?.donadora_id) || donas.find(d => d.id === ext?.donadora?.id)
+  const byRegistro = ext?.donadora?.numero_registro
+    ? donas.find(d => d.numero_registro === ext.donadora.numero_registro)
+    : null
+  const found = byId || byRegistro
+
+  if (found?.nombre) return `${found.nombre} (${found.numero_registro || '-'})`
+  if (found?.numero_registro) return `Registro ${found.numero_registro}`
+  if (ext?.donadora?.nombre) return `${ext.donadora.nombre} (${ext.donadora.numero_registro || '-'})`
+  if (ext?.donadora?.numero_registro) return `Registro ${ext.donadora.numero_registro}`
+  if (ext?.numero_registro) return `Registro ${ext.numero_registro}`
+  if (ext?.donadora_id) return `ID ${ext.donadora_id}`
+  return 'Nueva donadora'
+}
 
 export default function OPUPage() {
   const navigate = useNavigate()
@@ -390,6 +406,132 @@ export default function OPUPage() {
     } catch (error) {
       console.error('Error eliminando sesion OPU:', error)
       alert('No se pudo eliminar la sesion')
+    }
+  }
+
+  const handleGenerateInforme = async (sesion) => {
+    try {
+      let donas = donadorasList
+      if (!donas || donas.length === 0) {
+        donas = await loadDonadoras()
+      }
+
+      const detail = await opuService.getById(sesion.id)
+      const extr = detail.extracciones || detail.extracciones_donadoras || []
+
+      const gi = extr.reduce((s, e) => s + (Number(e.grado_1) || 0), 0)
+      const gii = extr.reduce((s, e) => s + (Number(e.grado_2) || 0), 0)
+      const giii = extr.reduce((s, e) => s + (Number(e.grado_3) || 0), 0)
+      const desnudos = extr.reduce((s, e) => s + (Number(e.desnudos) || 0), 0)
+      const irregular = extr.reduce((s, e) => s + (Number(e.irregular) || 0), 0)
+      const totalViables = gi + gii + giii + desnudos
+      const totalOvocitos = totalViables + irregular
+      const viabilidad = totalOvocitos > 0 ? ((totalViables / totalOvocitos) * 100).toFixed(1) : '0'
+      const totalDonadoras = extr.length
+
+      const rowsHtml = extr.map((ext, idx) => {
+        const donadoraLabel = getDonadoraLabel(ext, donas)
+        return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${donadoraLabel}</td>
+          <td>${ext.hora_inicio || ext.hora_extraccion || ''}</td>
+          <td>${ext.hora_fin || ''}</td>
+          <td>${ext.toro_a || ''}</td>
+          <td>${ext.toro_b || ''}</td>
+          <td>${ext.ct || ''}</td>
+          <td>${ext.cc || ''}</td>
+          <td>${ext.eo || ''}</td>
+          <td>${ext.prevision_campo ?? ''}</td>
+          <td>${ext.grado_1 || 0}</td>
+          <td>${ext.grado_2 || 0}</td>
+          <td>${ext.grado_3 || 0}</td>
+          <td>${ext.desnudos || 0}</td>
+          <td>${ext.irregular || 0}</td>
+          <td>${calcTotalViables(ext)}</td>
+        </tr>
+        `
+      }).join('')
+
+      const fechaStr = detail.fecha ? new Date(detail.fecha).toLocaleDateString('es-ES') : ''
+
+      const html = `
+        <html>
+          <head>
+            <title>Informe OPU #${detail.id}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 16px; color: #111; }
+              h1 { margin: 0 0 8px 0; }
+              .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 8px 0 12px 0; }
+              .card { border: 1px solid #ddd; border-radius: 8px; padding: 8px; }
+              table { width: 100%; border-collapse: collapse; font-size: 12px; }
+              th, td { border: 1px solid #ddd; padding: 6px; }
+              th { background: #f5f5f5; text-align: left; }
+              .section { margin-top: 12px; }
+            </style>
+          </head>
+          <body>
+            <h1>Informe sesión OPU #${detail.id}</h1>
+            <div class="grid">
+              <div class="card"><strong>Cliente:</strong> ${detail.cliente || ''}</div>
+              <div class="card"><strong>Fecha:</strong> ${fechaStr}</div>
+              <div class="card"><strong>Receptoras:</strong> ${detail.receptoras ?? '-'}</div>
+              <div class="card"><strong>Técnico OPU:</strong> ${detail.tecnico_opu || ''}</div>
+              <div class="card"><strong>Técnico búsqueda:</strong> ${detail.tecnico_busqueda || ''}</div>
+              <div class="card"><strong>Hacienda:</strong> ${detail.hacienda || ''}</div>
+              <div class="card"><strong>Hora inicio:</strong> ${detail.hora_inicio || ''}</div>
+              <div class="card"><strong>Hora fin:</strong> ${detail.hora_final || ''}</div>
+            </div>
+
+            <div class="section">
+              <h3>Análisis</h3>
+              <div class="grid">
+                <div class="card"><strong>% Viabilidad:</strong> ${viabilidad}%</div>
+                <div class="card"><strong>Total donadoras:</strong> ${totalDonadoras}</div>
+                <div class="card"><strong>Total ovocitos:</strong> ${totalOvocitos}</div>
+                <div class="card"><strong>Viables:</strong> ${totalViables}</div>
+              </div>
+            </div>
+
+            <div class="section">
+              <h3>Detalle de aspiraciones</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th><th>Donadora</th><th>H.Inicio</th><th>H.Fin</th><th>Toro A</th><th>Toro B</th>
+                    <th>CT</th><th>CC</th><th>E.O</th><th>Prev. campo</th>
+                    <th>GI</th><th>GII</th><th>GIII</th><th>Desnudos</th><th>Irregular</th><th>Tot. viables</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml || '<tr><td colspan=\"16\">Sin registros</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="section">
+              <h3>Observaciones</h3>
+              <div class="card">${detail.observaciones ? detail.observaciones : 'N/A'}</div>
+            </div>
+
+            <div class="section" style="margin-top:40px; min-height:160px;">
+              <div style="margin-top:80px; width:260px; border-top: 1px solid #444; padding-top:4px; text-align:center; font-size:12px;">
+                Firma Técnico OPU / Aspirador
+              </div>
+            </div>
+          </body>
+        </html>
+      `
+
+      const win = window.open('', '_blank')
+      win.document.write(html)
+      win.document.close()
+      win.focus()
+      win.print()
+      win.close()
+    } catch (error) {
+      console.error('No se pudo generar el informe', error)
+      alert('No se pudo generar el informe')
     }
   }
 
@@ -1051,6 +1193,13 @@ export default function OPUPage() {
                         >
                           <Eye size={16} />
                           <span>Ver Detalles</span>
+                        </button>
+                        <button
+                          onClick={() => handleGenerateInforme(sesion)}
+                          className="px-3 py-2 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors flex items-center gap-1.5 font-medium"
+                        >
+                          <FileText size={16} />
+                          <span>Informe</span>
                         </button>
                         <button
                           onClick={() => handleDeleteSesion(sesion.id)}
