@@ -3,7 +3,8 @@
     "allow": [
       "Read(//d/Documentos/**)",
       "Bash(xargs ls -lht)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
