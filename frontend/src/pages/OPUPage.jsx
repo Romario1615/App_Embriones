@@ -70,6 +70,7 @@ export default function OPUPage() {
   const [donadoraSearch, setDonadoraSearch] = useState('')
   const [showDonadoraModal, setShowDonadoraModal] = useState(false)
   const [sessionCollapsed, setSessionCollapsed] = useState(false)
+  const [viewExtraccion, setViewExtraccion] = useState(null)
   const isSubmittingRef = useRef(false)
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
@@ -239,6 +240,31 @@ export default function OPUPage() {
     setEditingRowIndex(null)
   }
 
+  // Cargar fotos existentes de cada extracción desde la API
+  const attachFotosToExtracciones = async (mappedExtracciones) => {
+    const withFotos = await Promise.all(
+      (mappedExtracciones || []).map(async (ext) => {
+        if (!ext.extraccion_id) return ext
+        try {
+          const data = await fotoService.getByEntidad('extraccion', ext.extraccion_id)
+          const fotos = (data?.fotos || []).map((f, idx) => ({
+            id: f.id,
+            preview: f.thumbnail_url || f.url,
+            url: f.url,
+            name: f.descripcion || `Foto ${f.orden ?? idx + 1}`,
+            existente: true,
+            fotoId: f.id
+          }))
+          return { ...ext, fotos }
+        } catch (error) {
+          console.warn('No se pudieron cargar fotos de la extracción', ext.extraccion_id, error)
+          return ext
+        }
+      })
+    )
+    return withFotos
+  }
+
   const mapExtraccionesFromApi = (list, donas = donadorasList) => {
     return (list || []).map((ext, idx) => {
       const found = donas.find(d => d.id === ext.donadora_id)
@@ -302,7 +328,8 @@ export default function OPUPage() {
 
     const extrList = detail.extracciones || detail.extracciones_donadoras || []
     const mapped = mapExtraccionesFromApi(extrList, donas)
-    setExtracciones(mapped)
+    const mappedWithFotos = await attachFotosToExtracciones(mapped)
+    setExtracciones(mappedWithFotos)
     setExtrForm({ ...emptyExtraccion, numero_secuencial: mapped.length + 1 })
     setEditingRowIndex(null)
     setShowForm(true)
@@ -375,11 +402,14 @@ export default function OPUPage() {
         addSesion(saved)
       }
 
-      // Subir fotos de cada extracción
+      // Subir fotos de cada extracción (empatar por número secuencial)
       const extrList = saved.extracciones || saved.extracciones_donadoras || []
+      const extrBySecuencial = new Map(
+        extrList.map((ext, index) => [ext.numero_secuencial || index + 1, ext])
+      )
       for (let i = 0; i < extracciones.length; i++) {
         const extLocal = extracciones[i]
-        const extSaved = extrList[i]
+        const extSaved = extrBySecuencial.get(extLocal.numero_secuencial) || extrList[i]
 
         if (extLocal.fotos && extLocal.fotos.length > 0 && extSaved?.id) {
           try {
@@ -398,7 +428,8 @@ export default function OPUPage() {
       // Refresh donadoras in case se creó una nueva en el flujo
       const donas = await loadDonadoras()
       const mapped = mapExtraccionesFromApi(extrList, donas)
-      setExtracciones(mapped)
+      const mappedWithFotos = await attachFotosToExtracciones(mapped)
+      setExtracciones(mappedWithFotos)
       setExtrForm({ ...emptyExtraccion, numero_secuencial: mapped.length + 1 })
       setEditingRowIndex(null)
       setEditingId(saved.id)
@@ -506,7 +537,6 @@ export default function OPUPage() {
             <title>Informe OPU #${detail.id}</title>
             <style>
               @media print {
-                .page-break { page-break-before: always; }
                 @page { margin: 1.5cm; }
               }
               body {
@@ -584,8 +614,9 @@ export default function OPUPage() {
                 padding-bottom: 6px;
               }
               .firmas-container {
-                margin-top: 60px;
+                margin-top: 40px;
                 page-break-inside: avoid;
+                break-inside: avoid;
               }
               .firmas {
                 display: grid;
@@ -617,12 +648,12 @@ export default function OPUPage() {
           </head>
           <body>
             <div class="header">
-              <h1>INFORME SESION OPU</h1>
-              <div class="subtitle">Sesión #${detail.id} - ${fechaStr}</div>
+              <h1>INFORME SESI&Oacute;N OPU</h1>
+              <div class="subtitle">Sesi&oacute;n #${detail.id} - ${fechaStr}</div>
             </div>
 
             <div class="section">
-              <h3>Información General</h3>
+              <h3>Informaci&oacute;n General</h3>
               <div class="grid">
                 <div class="card">
                   <strong>Cliente</strong>
@@ -637,11 +668,11 @@ export default function OPUPage() {
                   <div class="card-value" style="text-transform: capitalize;">${detail.finalidad || '-'}</div>
                 </div>
                 <div class="card">
-                  <strong>Técnico OPU</strong>
+                  <strong>T&eacute;cnico OPU</strong>
                   <div class="card-value">${detail.tecnico_opu || '-'}</div>
                 </div>
                 <div class="card">
-                  <strong>Técnico Búsqueda</strong>
+                  <strong>T&eacute;cnico B&uacute;squeda</strong>
                   <div class="card-value">${detail.tecnico_busqueda || '-'}</div>
                 </div>
                 <div class="card">
@@ -723,16 +754,16 @@ export default function OPUPage() {
             </div>
             ` : ''}
 
-            <div class="firmas-container page-break">
+            <div class="firmas-container">
               <div class="firmas">
                 <div class="firma-box">
                   <div class="firma-line"></div>
-                  <div class="firma-label">Técnico OPU / Aspirador</div>
+                  <div class="firma-label">T&eacute;cnico OPU / Aspirador</div>
                   <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${detail.tecnico_opu || ''}</div>
                 </div>
                 <div class="firma-box">
                   <div class="firma-line"></div>
-                  <div class="firma-label">Técnico Búsqueda</div>
+                  <div class="firma-label">T&eacute;cnico B&uacute;squeda</div>
                   <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${detail.tecnico_busqueda || ''}</div>
                 </div>
                 <div class="firma-box">
@@ -764,12 +795,26 @@ export default function OPUPage() {
       }
 
       try {
-        win.document.open()
-        win.document.write(html)
-        win.document.close()
-        win.focus()
-        win.print()
-        win.close()
+        // Abrimos el HTML mediante un blob para asegurar compatibilidad con impresión
+        const blob = new Blob([html], { type: 'text/html' })
+        const url = URL.createObjectURL(blob)
+        win.location = url
+        // Dar un breve tiempo para cargar el documento antes de imprimir
+        setTimeout(() => {
+          try {
+            win.focus()
+            win.print()
+            win.close()
+          } catch (err) {
+            console.error('Error al imprimir, se descargará el informe', err)
+            fallbackDownload(html, detail.id)
+            if (win && !win.closed) {
+              win.close()
+            }
+          } finally {
+            URL.revokeObjectURL(url)
+          }
+        }, 400)
       } catch (err) {
         console.error('Popup bloqueado, se descargará el informe', err)
         fallbackDownload(html, detail.id)
@@ -788,6 +833,105 @@ export default function OPUPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {viewExtraccion && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <div>
+                <h3 className="text-xl font-semibold">Detalle de extracción</h3>
+                <p className="text-sm text-gray-600">Donadora: {getDonadoraLabel(viewExtraccion, donadorasList)}</p>
+              </div>
+              <button
+                onClick={() => setViewExtraccion(null)}
+                className="text-gray-500 hover:text-gray-700"
+                title="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Hora inicio</p>
+                  <p className="font-medium">{viewExtraccion.hora_inicio || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Hora fin</p>
+                  <p className="font-medium">{viewExtraccion.hora_fin || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Toro A</p>
+                  <p className="font-medium">{viewExtraccion.toro_a || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Toro B</p>
+                  <p className="font-medium">{viewExtraccion.toro_b || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">CT / CC / EO</p>
+                  <p className="font-medium">
+                    {viewExtraccion.ct || '-'} / {viewExtraccion.cc || '-'} / {viewExtraccion.eo || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Previsión campo</p>
+                  <p className="font-medium">{viewExtraccion.prevision_campo ?? '-'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700 font-semibold uppercase mb-1">GI</p>
+                  <p className="text-xl font-bold text-blue-900">{viewExtraccion.grado_1}</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700 font-semibold uppercase mb-1">GII</p>
+                  <p className="text-xl font-bold text-blue-900">{viewExtraccion.grado_2}</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700 font-semibold uppercase mb-1">GIII</p>
+                  <p className="text-xl font-bold text-blue-900">{viewExtraccion.grado_3}</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700 font-semibold uppercase mb-1">Desnudos</p>
+                  <p className="text-xl font-bold text-blue-900">{viewExtraccion.desnudos}</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-700 font-semibold uppercase mb-1">Irregular</p>
+                  <p className="text-xl font-bold text-blue-900">{viewExtraccion.irregular}</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border rounded-lg p-3 flex items-center justify-between">
+                <span className="text-sm text-gray-700 font-medium">Total viables</span>
+                <span className="text-lg font-bold text-gray-900">{calcTotalViables(viewExtraccion)}</span>
+              </div>
+
+              {viewExtraccion.fotos && viewExtraccion.fotos.length > 0 ? (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-gray-800">Fotos</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {viewExtraccion.fotos.map((foto) => (
+                      <div key={foto.id} className="border rounded-lg overflow-hidden">
+                        <img
+                          src={foto.preview || foto.url}
+                          alt={foto.name}
+                          className="w-full h-32 object-cover"
+                        />
+                        <div className="px-2 py-1 text-xs text-gray-600">{foto.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600">Sin fotos asociadas</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Modulo OPU</h1>
@@ -832,12 +976,12 @@ export default function OPUPage() {
                       {errors.fecha && <p className="text-sm text-red-500 mt-1">{errors.fecha.message}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Tecnico OPU *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">T&eacute;cnico OPU *</label>
                       <input {...register('tecnico_opu', { required: 'Requerido' })} className="input-field" />
                       {errors.tecnico_opu && <p className="text-sm text-red-500 mt-1">{errors.tecnico_opu.message}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Tecnico busqueda *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">T&eacute;cnico B&uacute;squeda *</label>
                       <input {...register('tecnico_busqueda', { required: 'Requerido' })} className="input-field" />
                       {errors.tecnico_busqueda && <p className="text-sm text-red-500 mt-1">{errors.tecnico_busqueda.message}</p>}
                     </div>
@@ -953,11 +1097,11 @@ export default function OPUPage() {
                     <p className="capitalize">{formValues?.finalidad || ''}</p>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-800">Tecnico OPU</p>
+                    <p className="font-medium text-gray-800">T&eacute;cnico OPU</p>
                     <p>{formValues?.tecnico_opu || ''}</p>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-800">Tecnico busqueda</p>
+                    <p className="font-medium text-gray-800">T&eacute;cnico B&uacute;squeda</p>
                     <p>{formValues?.tecnico_busqueda || ''}</p>
                   </div>
                 </div>
@@ -1357,6 +1501,13 @@ export default function OPUPage() {
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
+                              onClick={() => setViewExtraccion(ext)}
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              Ver
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => editExtraccion(idx)}
                               className="text-primary hover:text-primary-dark text-sm"
                             >
@@ -1545,3 +1696,4 @@ export default function OPUPage() {
     </div>
   )
 }
+
