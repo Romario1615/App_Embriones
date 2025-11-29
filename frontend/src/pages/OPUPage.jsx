@@ -265,6 +265,65 @@ export default function OPUPage() {
     return withFotos
   }
 
+  // Encontrar extracción guardada en API para empatar (usa id o numero_secuencial)
+  const findSavedExtraccion = (extLocal, extrList) => {
+    if (!extrList || extrList.length === 0) return null
+    const byId = extLocal.extraccion_id
+      ? extrList.find((e) => e.id === extLocal.extraccion_id)
+      : null
+    if (byId) return byId
+    const secuencial = extLocal.numero_secuencial
+    if (secuencial) {
+      const bySec = extrList.find(
+        (e) => (e.numero_secuencial || 0) === (Number(secuencial) || 0)
+      )
+      if (bySec) return bySec
+    }
+    return extrList[extLocal.numero_secuencial - 1] || extrList[0] || null
+  }
+
+  // Sincroniza fotos de una extracción contra backend (elimina las quitadas y sube nuevas)
+  const syncExtraccionFotos = async (extLocal, extSaved) => {
+    if (!extSaved?.id) return
+
+    const fotosLocales = extLocal.fotos || []
+    const keepIds = fotosLocales
+      .filter((f) => f.existente && f.fotoId)
+      .map((f) => f.fotoId)
+    const nuevas = fotosLocales.filter((f) => f.file)
+
+    // Obtener fotos actuales para borrar las que se quitaron
+    let actuales = []
+    try {
+      const data = await fotoService.getByEntidad('extraccion', extSaved.id)
+      actuales = data?.fotos || []
+    } catch (err) {
+      console.error('No se pudieron obtener fotos actuales de la extracción', extSaved.id, err)
+    }
+
+    for (const foto of actuales) {
+      if (!keepIds.includes(foto.id)) {
+        try {
+          await fotoService.delete(foto.id)
+        } catch (err) {
+          console.error('No se pudo eliminar foto', foto.id, err)
+        }
+      }
+    }
+
+    const startOrder = keepIds.length
+    for (let j = 0; j < nuevas.length; j++) {
+      const foto = nuevas[j]
+      if (foto.file) {
+        try {
+          await fotoService.upload('extraccion', extSaved.id, foto.file, startOrder + j)
+        } catch (err) {
+          console.error('No se pudo subir foto nueva de extracción', extSaved.id, err)
+        }
+      }
+    }
+  }
+
   const mapExtraccionesFromApi = (list, donas = donadorasList) => {
     return (list || []).map((ext, idx) => {
       const found = donas.find(d => d.id === ext.donadora_id)
@@ -353,9 +412,11 @@ export default function OPUPage() {
     try {
       const payload = {
         ...data,
-        extracciones: extracciones.map((ext) => {
+        extracciones: extracciones.map((ext, idx) => {
           const base = {
-            numero_secuencial: Number(ext.numero_secuencial) || 0,
+            id: ext.extraccion_id || null,
+            // Mantener el secuencial original si existe; si no, asignar por posición (1-based)
+            numero_secuencial: Number(ext.numero_secuencial) || idx + 1,
             hora_inicio: ext.hora_inicio || null,
             hora_fin: ext.hora_fin || null,
             toro_a: ext.toro_a?.trim() || null,
@@ -402,32 +463,26 @@ export default function OPUPage() {
         addSesion(saved)
       }
 
-      // Subir fotos de cada extracción (empatar por número secuencial)
+      // Sincronizar fotos de cada extracción (elimina quitadas y sube nuevas)
       const extrList = saved.extracciones || saved.extracciones_donadoras || []
-      const extrBySecuencial = new Map(
-        extrList.map((ext, index) => [ext.numero_secuencial || index + 1, ext])
-      )
       for (let i = 0; i < extracciones.length; i++) {
         const extLocal = extracciones[i]
-        const extSaved = extrBySecuencial.get(extLocal.numero_secuencial) || extrList[i]
-
-        if (extLocal.fotos && extLocal.fotos.length > 0 && extSaved?.id) {
-          try {
-            for (let j = 0; j < extLocal.fotos.length; j++) {
-              const foto = extLocal.fotos[j]
-              if (foto.file) {
-                await fotoService.upload('extraccion', extSaved.id, foto.file, j)
-              }
-            }
-          } catch (error) {
-            console.error(`Error subiendo fotos de extracción ${i + 1}:`, error)
-          }
-        }
+        const extSaved = findSavedExtraccion(extLocal, extrList)
+        await syncExtraccionFotos(extLocal, extSaved)
       }
+
+      // Recargar sesión para reflejar fotos recién subidas
+      let refreshed = saved
+      try {
+        refreshed = await opuService.getById(saved.id)
+      } catch (err) {
+        console.warn('No se pudo refrescar la sesión después de subir fotos, usando datos locales', err)
+      }
+      const extrListRefreshed = refreshed.extracciones || refreshed.extracciones_donadoras || []
 
       // Refresh donadoras in case se creó una nueva en el flujo
       const donas = await loadDonadoras()
-      const mapped = mapExtraccionesFromApi(extrList, donas)
+      const mapped = mapExtraccionesFromApi(extrListRefreshed, donas)
       const mappedWithFotos = await attachFotosToExtracciones(mapped)
       setExtracciones(mappedWithFotos)
       setExtrForm({ ...emptyExtraccion, numero_secuencial: mapped.length + 1 })

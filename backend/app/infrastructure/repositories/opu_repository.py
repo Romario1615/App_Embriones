@@ -103,35 +103,62 @@ class OPURepository:
         return result.scalars().all()
 
     async def update(self, sesion: SesionOPU, data: dict, extracciones: Optional[List[dict]] = None) -> SesionOPU:
-        """Actualizar sesión y, si se envían, reemplazar extracciones"""
+        """Actualizar sesión y, si se envían, sincronizar extracciones sin recrearlas todas"""
         for key, value in data.items():
             setattr(sesion, key, value)
 
         if extracciones is not None:
-            sesion.extracciones_donadoras.clear()
-            await self.db.flush()
+            actuales_by_id = {ext.id: ext for ext in sesion.extracciones_donadoras}
+            ids_recibidos = set()
+
             for ext in extracciones:
                 donadora_id = await self._resolve_donadora_id(ext)
-                nueva_ext = ExtraccionDonadora(
-                    sesion_opu_id=sesion.id,
-                donadora_id=donadora_id,
-                numero_secuencial=ext["numero_secuencial"],
-                hora_inicio=ext.get("hora_inicio"),
-                hora_fin=ext.get("hora_fin"),
-                toro_a=ext.get("toro_a"),
-                toro_b=ext.get("toro_b"),
-                raza_toro=ext.get("raza_toro"),
-                ct=ext.get("ct"),
-                cc=ext.get("cc"),
-                eo=ext.get("eo"),
-                prevision_campo=ext.get("prevision_campo"),
-                grado_1=ext.get("grado_1", 0),
-                grado_2=ext.get("grado_2", 0),
-                grado_3=ext.get("grado_3", 0),
-                desnudos=ext.get("desnudos", 0),
-                irregular=ext.get("irregular", 0),
-                )
-                self.db.add(nueva_ext)
+                ext_id = ext.get("id")
+
+                if ext_id and ext_id in actuales_by_id:
+                    existente = actuales_by_id[ext_id]
+                    existente.donadora_id = donadora_id
+                    existente.numero_secuencial = ext["numero_secuencial"]
+                    existente.hora_inicio = ext.get("hora_inicio")
+                    existente.hora_fin = ext.get("hora_fin")
+                    existente.toro_a = ext.get("toro_a")
+                    existente.toro_b = ext.get("toro_b")
+                    existente.raza_toro = ext.get("raza_toro")
+                    existente.ct = ext.get("ct")
+                    existente.cc = ext.get("cc")
+                    existente.eo = ext.get("eo")
+                    existente.prevision_campo = ext.get("prevision_campo")
+                    existente.grado_1 = ext.get("grado_1", 0)
+                    existente.grado_2 = ext.get("grado_2", 0)
+                    existente.grado_3 = ext.get("grado_3", 0)
+                    existente.desnudos = ext.get("desnudos", 0)
+                    existente.irregular = ext.get("irregular", 0)
+                    ids_recibidos.add(ext_id)
+                else:
+                    nueva_ext = ExtraccionDonadora(
+                        sesion_opu_id=sesion.id,
+                        donadora_id=donadora_id,
+                        numero_secuencial=ext["numero_secuencial"],
+                        hora_inicio=ext.get("hora_inicio"),
+                        hora_fin=ext.get("hora_fin"),
+                        toro_a=ext.get("toro_a"),
+                        toro_b=ext.get("toro_b"),
+                        raza_toro=ext.get("raza_toro"),
+                        ct=ext.get("ct"),
+                        cc=ext.get("cc"),
+                        eo=ext.get("eo"),
+                        prevision_campo=ext.get("prevision_campo"),
+                        grado_1=ext.get("grado_1", 0),
+                        grado_2=ext.get("grado_2", 0),
+                        grado_3=ext.get("grado_3", 0),
+                        desnudos=ext.get("desnudos", 0),
+                        irregular=ext.get("irregular", 0),
+                    )
+                    self.db.add(nueva_ext)
+
+            for ext_id, ext_obj in actuales_by_id.items():
+                if ext_id not in ids_recibidos:
+                    await self.db.delete(ext_obj)
 
         await self.db.commit()
         # Devolver sesión con extracciones cargadas
