@@ -5,6 +5,8 @@ import { Plus, Save, Eye, X, Trash2, Search, XCircle, Calendar, User, FileText }
 import { useOPUStore } from '../store/opuStore'
 import opuService from '../services/opuService'
 import donadoraService from '../services/donadoraService'
+import fotoService from '../services/fotoService'
+import PhotoCapture from '../components/PhotoCapture'
 
 const emptyExtraccion = {
   numero_secuencial: 1,
@@ -29,7 +31,8 @@ const emptyExtraccion = {
   nueva_registro: '',
   nueva_raza: '',
   nueva_tipo_ganado: '',
-  nueva_propietario: ''
+  nueva_propietario: '',
+  fotos: []
 }
 
 const calcTotalViables = (ext) =>
@@ -200,7 +203,8 @@ export default function OPUPage() {
       nueva_registro: extrForm.nueva_registro || '',
       nueva_raza: extrForm.nueva_raza || '',
       nueva_tipo_ganado: extrForm.nueva_tipo_ganado || '',
-      nueva_propietario: extrForm.nueva_propietario || ''
+      nueva_propietario: extrForm.nueva_propietario || '',
+      fotos: extrForm.fotos || []
     }
 
     let updated = [...extracciones]
@@ -261,7 +265,9 @@ export default function OPUPage() {
         nueva_registro: '',
         nueva_raza: '',
         nueva_tipo_ganado: '',
-        nueva_propietario: ''
+        nueva_propietario: '',
+        fotos: [],
+        extraccion_id: ext.id
       }
     })
   }
@@ -369,9 +375,28 @@ export default function OPUPage() {
         addSesion(saved)
       }
 
+      // Subir fotos de cada extracción
+      const extrList = saved.extracciones || saved.extracciones_donadoras || []
+      for (let i = 0; i < extracciones.length; i++) {
+        const extLocal = extracciones[i]
+        const extSaved = extrList[i]
+
+        if (extLocal.fotos && extLocal.fotos.length > 0 && extSaved?.id) {
+          try {
+            for (let j = 0; j < extLocal.fotos.length; j++) {
+              const foto = extLocal.fotos[j]
+              if (foto.file) {
+                await fotoService.upload('extraccion', extSaved.id, foto.file, j)
+              }
+            }
+          } catch (error) {
+            console.error(`Error subiendo fotos de extracción ${i + 1}:`, error)
+          }
+        }
+      }
+
       // Refresh donadoras in case se creó una nueva en el flujo
       const donas = await loadDonadoras()
-      const extrList = saved.extracciones || saved.extracciones_donadoras || []
       const mapped = mapExtraccionesFromApi(extrList, donas)
       setExtracciones(mapped)
       setExtrForm({ ...emptyExtraccion, numero_secuencial: mapped.length + 1 })
@@ -460,64 +485,253 @@ export default function OPUPage() {
           <head>
             <title>Informe OPU #${detail.id}</title>
             <style>
-              body { font-family: Arial, sans-serif; padding: 16px; color: #111; }
-              h1 { margin: 0 0 8px 0; }
-              .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 8px 0 12px 0; }
-              .card { border: 1px solid #ddd; border-radius: 8px; padding: 8px; }
-              table { width: 100%; border-collapse: collapse; font-size: 12px; }
-              th, td { border: 1px solid #ddd; padding: 6px; }
-              th { background: #f5f5f5; text-align: left; }
-              .section { margin-top: 12px; }
+              @media print {
+                .page-break { page-break-before: always; }
+                @page { margin: 1.5cm; }
+              }
+              body {
+                font-family: Arial, sans-serif;
+                padding: 16px;
+                color: #111;
+                max-width: 1200px;
+                margin: 0 auto;
+              }
+              .header {
+                border-bottom: 3px solid #2563eb;
+                padding-bottom: 12px;
+                margin-bottom: 16px;
+              }
+              .header h1 {
+                margin: 0 0 4px 0;
+                color: #2563eb;
+                font-size: 24px;
+              }
+              .header .subtitle {
+                color: #666;
+                font-size: 14px;
+              }
+              .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 10px;
+                margin: 12px 0;
+              }
+              .card {
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                padding: 10px;
+                background: #f9fafb;
+              }
+              .card strong {
+                display: block;
+                color: #374151;
+                font-size: 11px;
+                margin-bottom: 4px;
+              }
+              .card-value {
+                color: #111;
+                font-size: 14px;
+                font-weight: 500;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+                margin-top: 12px;
+              }
+              th, td {
+                border: 1px solid #ddd;
+                padding: 8px 6px;
+                text-align: left;
+              }
+              th {
+                background: #f3f4f6;
+                font-weight: 600;
+                color: #374151;
+              }
+              tbody tr:nth-child(even) {
+                background: #fafafa;
+              }
+              .section {
+                margin-top: 20px;
+                break-inside: avoid;
+              }
+              .section h3 {
+                color: #2563eb;
+                font-size: 16px;
+                margin: 0 0 12px 0;
+                border-bottom: 2px solid #e5e7eb;
+                padding-bottom: 6px;
+              }
+              .firmas-container {
+                margin-top: 60px;
+                page-break-inside: avoid;
+              }
+              .firmas {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 40px;
+                margin-top: 80px;
+              }
+              .firma-box {
+                text-align: center;
+              }
+              .firma-line {
+                border-top: 2px solid #374151;
+                margin-bottom: 8px;
+              }
+              .firma-label {
+                font-size: 12px;
+                color: #374151;
+                font-weight: 500;
+              }
+              .footer {
+                margin-top: 30px;
+                padding-top: 16px;
+                border-top: 1px solid #e5e7eb;
+                text-align: center;
+                font-size: 11px;
+                color: #6b7280;
+              }
             </style>
           </head>
           <body>
-            <h1>Informe sesión OPU #${detail.id}</h1>
-            <div class="grid">
-              <div class="card"><strong>Cliente:</strong> ${detail.cliente || ''}</div>
-              <div class="card"><strong>Fecha:</strong> ${fechaStr}</div>
-              <div class="card"><strong>Receptoras:</strong> ${detail.receptoras ?? '-'}</div>
-              <div class="card"><strong>Técnico OPU:</strong> ${detail.tecnico_opu || ''}</div>
-              <div class="card"><strong>Técnico búsqueda:</strong> ${detail.tecnico_busqueda || ''}</div>
-              <div class="card"><strong>Hacienda:</strong> ${detail.hacienda || ''}</div>
-              <div class="card"><strong>Hora inicio:</strong> ${detail.hora_inicio || ''}</div>
-              <div class="card"><strong>Hora fin:</strong> ${detail.hora_final || ''}</div>
+            <div class="header">
+              <h1>INFORME SESIÓN OPU</h1>
+              <div class="subtitle">Sesión #${detail.id} - ${fechaStr}</div>
             </div>
 
             <div class="section">
-              <h3>Análisis</h3>
+              <h3>Información General</h3>
               <div class="grid">
-                <div class="card"><strong>% Viabilidad:</strong> ${viabilidad}%</div>
-                <div class="card"><strong>Total donadoras:</strong> ${totalDonadoras}</div>
-                <div class="card"><strong>Total ovocitos:</strong> ${totalOvocitos}</div>
-                <div class="card"><strong>Viables:</strong> ${totalViables}</div>
+                <div class="card">
+                  <strong>Cliente</strong>
+                  <div class="card-value">${detail.cliente || '-'}</div>
+                </div>
+                <div class="card">
+                  <strong>Fecha</strong>
+                  <div class="card-value">${fechaStr}</div>
+                </div>
+                <div class="card">
+                  <strong>Finalidad</strong>
+                  <div class="card-value" style="text-transform: capitalize;">${detail.finalidad || '-'}</div>
+                </div>
+                <div class="card">
+                  <strong>Técnico OPU</strong>
+                  <div class="card-value">${detail.tecnico_opu || '-'}</div>
+                </div>
+                <div class="card">
+                  <strong>Técnico Búsqueda</strong>
+                  <div class="card-value">${detail.tecnico_busqueda || '-'}</div>
+                </div>
+                <div class="card">
+                  <strong>Hacienda</strong>
+                  <div class="card-value">${detail.hacienda || '-'}</div>
+                </div>
+                <div class="card">
+                  <strong>Hora Inicio</strong>
+                  <div class="card-value">${detail.hora_inicio || '-'}</div>
+                </div>
+                <div class="card">
+                  <strong>Hora Fin</strong>
+                  <div class="card-value">${detail.hora_final || '-'}</div>
+                </div>
+                <div class="card">
+                  <strong>Receptoras</strong>
+                  <div class="card-value">${detail.receptoras ?? '-'}</div>
+                </div>
               </div>
             </div>
 
             <div class="section">
-              <h3>Detalle de aspiraciones</h3>
+              <h3>Resumen de Resultados</h3>
+              <div class="grid">
+                <div class="card" style="background: #dbeafe;">
+                  <strong>Total Donadoras</strong>
+                  <div class="card-value" style="font-size: 20px; color: #2563eb;">${totalDonadoras}</div>
+                </div>
+                <div class="card" style="background: #dcfce7;">
+                  <strong>Ovocitos Viables</strong>
+                  <div class="card-value" style="font-size: 20px; color: #16a34a;">${totalViables}</div>
+                </div>
+                <div class="card" style="background: #fef3c7;">
+                  <strong>Total Ovocitos</strong>
+                  <div class="card-value" style="font-size: 20px; color: #ca8a04;">${totalOvocitos}</div>
+                </div>
+                <div class="card" style="background: #e0e7ff;">
+                  <strong>% Viabilidad</strong>
+                  <div class="card-value" style="font-size: 20px; color: #4f46e5;">${viabilidad}%</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <h3>Detalle de Aspiraciones</h3>
               <table>
                 <thead>
                   <tr>
-                    <th>#</th><th>Donadora</th><th>H.Inicio</th><th>H.Fin</th><th>Toro A</th><th>Toro B</th>
-                    <th>CT</th><th>CC</th><th>E.O</th><th>Prev. campo</th>
-                    <th>GI</th><th>GII</th><th>GIII</th><th>Desnudos</th><th>Irregular</th><th>Tot. viables</th>
+                    <th style="width: 30px;">#</th>
+                    <th>Donadora</th>
+                    <th style="width: 60px;">H.Inicio</th>
+                    <th style="width: 60px;">H.Fin</th>
+                    <th>Toro A</th>
+                    <th>Toro B</th>
+                    <th style="width: 50px;">CT</th>
+                    <th style="width: 50px;">CC</th>
+                    <th style="width: 50px;">E.O</th>
+                    <th style="width: 50px;">Prev.</th>
+                    <th style="width: 40px;">GI</th>
+                    <th style="width: 40px;">GII</th>
+                    <th style="width: 40px;">GIII</th>
+                    <th style="width: 50px;">Desn.</th>
+                    <th style="width: 50px;">Irreg.</th>
+                    <th style="width: 60px;"><strong>Viables</strong></th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${rowsHtml || '<tr><td colspan=\"16\">Sin registros</td></tr>'}
+                  ${rowsHtml || '<tr><td colspan="16">Sin registros</td></tr>'}
                 </tbody>
               </table>
             </div>
 
+            ${detail.observaciones ? `
             <div class="section">
               <h3>Observaciones</h3>
-              <div class="card">${detail.observaciones ? detail.observaciones : 'N/A'}</div>
+              <div class="card">
+                <div class="card-value">${detail.observaciones}</div>
+              </div>
+            </div>
+            ` : ''}
+
+            <div class="firmas-container page-break">
+              <div class="firmas">
+                <div class="firma-box">
+                  <div class="firma-line"></div>
+                  <div class="firma-label">Técnico OPU / Aspirador</div>
+                  <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${detail.tecnico_opu || ''}</div>
+                </div>
+                <div class="firma-box">
+                  <div class="firma-line"></div>
+                  <div class="firma-label">Técnico Búsqueda</div>
+                  <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${detail.tecnico_busqueda || ''}</div>
+                </div>
+                <div class="firma-box">
+                  <div class="firma-line"></div>
+                  <div class="firma-label">Cliente</div>
+                  <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${detail.cliente || ''}</div>
+                </div>
+              </div>
             </div>
 
-            <div class="section" style="margin-top:40px; min-height:160px;">
-              <div style="margin-top:80px; width:260px; border-top: 1px solid #444; padding-top:4px; text-align:center; font-size:12px;">
-                Firma Técnico OPU / Aspirador
-              </div>
+            <div class="footer">
+              Informe generado el ${new Date().toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
             </div>
           </body>
         </html>
@@ -1053,6 +1267,17 @@ export default function OPUPage() {
                   <p className="text-xl font-semibold text-gray-800">{calcTotalViables(extrForm)}</p>
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Fotografías de la extracción (hasta 6)
+              </label>
+              <PhotoCapture
+                photos={extrForm.fotos || []}
+                onChange={(fotos) => setExtrForm({ ...extrForm, fotos })}
+                maxPhotos={6}
+              />
             </div>
 
             <div className="flex justify-end">

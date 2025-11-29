@@ -148,6 +148,11 @@ class ExtraccionDonadora(Base):
     desnudos = Column(Integer, default=0, nullable=False)
     irregular = Column(Integer, default=0, nullable=False)
 
+    # Fotos de la extraccion (Cloudinary)
+    foto_ruta = Column(String(500), nullable=True)
+    foto_thumbnail = Column(String(500), nullable=True)
+    foto_public_id = Column(String(200), nullable=True)
+
     # Relaciones
     sesion_opu = relationship("SesionOPU", back_populates="extracciones_donadoras")
     donadora = relationship("Donadora", back_populates="extracciones")
