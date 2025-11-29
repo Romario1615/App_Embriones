@@ -435,7 +435,27 @@ export default function OPUPage() {
   }
 
   const handleGenerateInforme = async (sesion) => {
+    // Abrimos la ventana primero para evitar bloqueos de popups por esperas async
+    const win = window.open('', '_blank')
+    const popupDisponible = !!(win && win.document)
+
+    const fallbackDownload = (html, detailId) => {
+      const blob = new Blob([html], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `informe-opu-${detailId}.html`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    }
+
     try {
+      if (popupDisponible) {
+        win.document.write('<p style="font-family:Arial;padding:16px;">Generando informe OPU...</p>')
+      }
+
       let donas = donadorasList
       if (!donas || donas.length === 0) {
         donas = await loadDonadoras()
@@ -597,7 +617,7 @@ export default function OPUPage() {
           </head>
           <body>
             <div class="header">
-              <h1>INFORME SESIÓN OPU</h1>
+              <h1>INFORME SESION OPU</h1>
               <div class="subtitle">Sesión #${detail.id} - ${fechaStr}</div>
             </div>
 
@@ -737,26 +757,14 @@ export default function OPUPage() {
         </html>
       `
 
-      const fallbackDownload = () => {
-        const blob = new Blob([html], { type: 'text/html' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `informe-opu-${detail.id}.html`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      }
-
-      const win = window.open('', '_blank')
-      if (!win || !win.document) {
+      if (!popupDisponible) {
         alert('No se pudo abrir la ventana para generar el informe. Se descargará como archivo.')
-        fallbackDownload()
+        fallbackDownload(html, detail.id)
         return
       }
 
       try {
+        win.document.open()
         win.document.write(html)
         win.document.close()
         win.focus()
@@ -764,7 +772,7 @@ export default function OPUPage() {
         win.close()
       } catch (err) {
         console.error('Popup bloqueado, se descargará el informe', err)
-        fallbackDownload()
+        fallbackDownload(html, detail.id)
         if (win && !win.closed) {
           win.close()
         }
@@ -772,6 +780,9 @@ export default function OPUPage() {
     } catch (error) {
       console.error('No se pudo generar el informe', error)
       alert('No se pudo generar el informe')
+      if (popupDisponible && win && !win.closed) {
+        win.close()
+      }
     }
   }
 
