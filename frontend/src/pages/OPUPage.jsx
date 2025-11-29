@@ -523,16 +523,38 @@ export default function OPUPage() {
         </html>
       `
 
+      const fallbackDownload = () => {
+        const blob = new Blob([html], { type: 'text/html' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `informe-opu-${detail.id}.html`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
+
       const win = window.open('', '_blank')
       if (!win || !win.document) {
-        alert('No se pudo abrir la ventana para generar el PDF. Habilita pop-ups e intenta de nuevo.')
+        alert('No se pudo abrir la ventana para generar el informe. Se descargará como archivo.')
+        fallbackDownload()
         return
       }
-      win.document.write(html)
-      win.document.close()
-      win.focus()
-      win.print()
-      win.close()
+
+      try {
+        win.document.write(html)
+        win.document.close()
+        win.focus()
+        win.print()
+        win.close()
+      } catch (err) {
+        console.error('Popup bloqueado, se descargará el informe', err)
+        fallbackDownload()
+        if (win && !win.closed) {
+          win.close()
+        }
+      }
     } catch (error) {
       console.error('No se pudo generar el informe', error)
       alert('No se pudo generar el informe')
