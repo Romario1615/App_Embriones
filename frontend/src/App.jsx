@@ -12,6 +12,7 @@ import FecundacionPage from './pages/FecundacionPage'
 import FecundacionDetail from './pages/FecundacionDetail'
 import TransferenciaPage from './pages/TransferenciaPage'
 import TransferenciaDetail from './pages/TransferenciaDetail'
+import TransferenciaNuevaPage from './pages/TransferenciaNuevaPage'
 import GFEPage from './pages/GFEPage'
 import GFEDetail from './pages/GFEDetail'
 import Layout from './components/layout/Layout'
@@ -98,6 +99,11 @@ function App() {
         <Route path="/transferencia" element={
           <ProtectedRoute>
             <TransferenciaPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/transferencia/nueva" element={
+          <ProtectedRoute>
+            <TransferenciaNuevaPage />
           </ProtectedRoute>
         } />
         <Route path="/transferencia/:fecha" element={

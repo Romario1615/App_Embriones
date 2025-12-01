@@ -636,3 +636,31 @@ INFO:     Finished server process [25436]
 INFO:     Started server process [7804]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\infrastructure\database\connection.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [7804]
+WARNING:  WatchFiles detected changes in 'app\presentation\api\v1\router.py', 'app\presentation\api\v1\endpoints\health.py', 'app\main.py', 'app\infrastructure\database\connection.py'. Reloading...
+Process SpawnProcess-18:
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\Documentos\Aplicacion Embriones\backend\venv\Lib\site-packages\uvicorn\_subprocess.py", line 76, in subprocess_started
+    config.configure_logging()
+  File "D:\Documentos\Aplicacion Embriones\backend\venv\Lib\site-packages\uvicorn\config.py", line 365, in configure_logging
+    logging.config.dictConfig(self.log_config)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\logging\config.py", line 823, in dictConfig
+    dictConfigClass(config).configure()
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\logging\config.py", line 553, in configure
+    formatters[name])
+    ~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\logging\config.py", line 335, in __getitem__
+    def __getitem__(self, key):
+    
+KeyboardInterrupt
+INFO:     Started server process [28224]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
