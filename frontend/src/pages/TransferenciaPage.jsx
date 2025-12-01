@@ -77,9 +77,9 @@ export default function TransferenciaPage() {
   }
 
   const onSubmit = async (data) => {
-    // Prevenir envíos concurrentes (doble clic)
+    // Prevenir envÃ­os concurrentes (doble clic)
     if (isSubmittingRef.current) {
-      console.warn('Ya hay un envío en progreso, ignorando...')
+      console.warn('Ya hay un envÃ­o en progreso, ignorando...')
       return
     }
 
@@ -114,7 +114,7 @@ export default function TransferenciaPage() {
     }
   }
 
-  // Agrupar transferencias por fecha de creación (sesiones)
+  // Agrupar transferencias por fecha de creaciÃ³n (sesiones)
   const sesiones = useMemo(() => {
     const grupos = {}
     transferencias.forEach(t => {
@@ -160,7 +160,7 @@ export default function TransferenciaPage() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar transferencia?')) return
+    if (!window.confirm('Â¿Eliminar transferencia?')) return
     try {
       await transferenciaService.delete(id)
       removeTransferencia(id)
@@ -171,7 +171,7 @@ export default function TransferenciaPage() {
   }
 
   const handleEditSesion = async (sesion) => {
-    // Abrir formulario para permitir agregar/editar transferencias de esta sesión
+    // Abrir formulario para permitir agregar/editar transferencias de esta sesiÃ³n
     setShowForm(true)
     // Limpiar formulario
     reset({
@@ -189,20 +189,20 @@ export default function TransferenciaPage() {
   }
 
   const handleDeleteSesion = async (sesion) => {
-    const mensaje = `¿Eliminar toda la sesión del ${new Date(sesion.fecha).toLocaleDateString()} con ${sesion.transferencias.length} transferencias?`
+    const mensaje = `Â¿Eliminar toda la sesiÃ³n del ${new Date(sesion.fecha).toLocaleDateString()} con ${sesion.transferencias.length} transferencias?`
     if (!window.confirm(mensaje)) return
 
     try {
-      // Eliminar todas las transferencias de la sesión
+      // Eliminar todas las transferencias de la sesiÃ³n
       await Promise.all(sesion.transferencias.map(t => transferenciaService.delete(t.id)))
 
       // Actualizar el store
       sesion.transferencias.forEach(t => removeTransferencia(t.id))
 
-      alert('Sesión eliminada correctamente')
+      alert('SesiÃ³n eliminada correctamente')
     } catch (error) {
       console.error(error)
-      alert('Error al eliminar la sesión')
+      alert('Error al eliminar la sesiÃ³n')
     }
   }
 
@@ -210,7 +210,7 @@ export default function TransferenciaPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Módulo de Transferencia de Embriones</h1>
+          <h1 className="text-3xl font-bold text-gray-800">MÃ³dulo de Transferencia de Embriones</h1>
           <p className="text-gray-600">Gestiona sesiones de transferencia</p>
         </div>
         <button
@@ -278,7 +278,7 @@ export default function TransferenciaPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nº secuencial *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">N° secuencial *</label>
               <input
                 type="number"
                 className="input-field"
@@ -379,6 +379,7 @@ export default function TransferenciaPage() {
             </button>
           </div>
         </form>
+
         </div>
       )}
 
@@ -413,7 +414,7 @@ export default function TransferenciaPage() {
                           <h3 className="text-lg font-bold text-gray-900">
                             {new Date(sesion.fecha).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                           </h3>
-                          <p className="text-sm text-gray-600 mt-1">Sesión de transferencias</p>
+                          <p className="text-sm text-gray-600 mt-1">SesiÃ³n de transferencias</p>
                         </div>
                       </div>
 
@@ -470,21 +471,21 @@ export default function TransferenciaPage() {
         </div>
       )}
 
-      {/* Listado individual (solo si showForm está activo) */}
+      {/* Listado individual (solo si showForm estÃ¡ activo) */}
       {showForm && (
         <div className="card">
           <h2 className="text-xl font-semibold mb-4">Transferencias registradas</h2>
           {transferencias.length === 0 ? (
-            <p className="text-gray-600">Aún no hay transferencias.</p>
+            <p className="text-gray-600">AÃºn no hay transferencias.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">N°</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">NÂ°</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Donadora</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Toro</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Receptora</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Receptoras</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
                   </tr>
                 </thead>
@@ -495,10 +496,10 @@ export default function TransferenciaPage() {
                       <td className="px-4 py-2">
                         {t.donadora_id && donadorasMap[t.donadora_id]
                           ? donadorasMap[t.donadora_id].nombre
-                          : '—'}
+                          : 'â€”'}
                       </td>
-                      <td className="px-4 py-2">{t.toro || '—'}</td>
-                      <td className="px-4 py-2">{t.receptora || '—'}</td>
+                      <td className="px-4 py-2">{t.toro || 'â€”'}</td>
+                      <td className="px-4 py-2">{t.receptora || 'â€”'}</td>
                       <td className="px-4 py-2">
                         <div className="flex space-x-3">
                           <button
@@ -524,7 +525,7 @@ export default function TransferenciaPage() {
         </div>
       )}
 
-      {/* Modal de selección de donadora */}
+      {/* Modal de selecciÃ³n de donadora */}
       {showDonadoraModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
@@ -556,7 +557,7 @@ export default function TransferenciaPage() {
                       className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors"
                     >
                       <p className="font-medium text-gray-800">{donadora.nombre}</p>
-                      <p className="text-sm text-gray-600">Registro: {donadora.numero_registro} • {donadora.raza}</p>
+                      <p className="text-sm text-gray-600">Registro: {donadora.numero_registro} â€¢ {donadora.raza}</p>
                     </button>
                   ))
                 )}
@@ -568,7 +569,6 @@ export default function TransferenciaPage() {
     </div>
   )
 }
-
 
 
 
