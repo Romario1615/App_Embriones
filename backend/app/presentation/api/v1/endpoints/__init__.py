@@ -1,7 +1,7 @@
 """
 Endpoints de la API
 """
-from . import auth, donadoras, drafts, opu, fecundacion, transferencia, gfe, fotos
+from . import auth, donadoras, drafts, opu, fecundacion, transferencia, gfe, fotos, sesion_transferencia
 
 __all__ = [
     "auth",
@@ -10,6 +10,7 @@ __all__ = [
     "opu",
     "fecundacion",
     "transferencia",
+    "sesion_transferencia",
     "gfe",
     "fotos"
 ]

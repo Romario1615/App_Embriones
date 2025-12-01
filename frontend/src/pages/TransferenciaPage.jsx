@@ -5,23 +5,29 @@ import { Plus, Save, Edit3, Trash2, Eye, Calendar, Target, X, Search } from 'luc
 import { useTransferenciaStore } from '../store/transferenciaStore'
 import transferenciaService from '../services/transferenciaService'
 import donadoraService from '../services/donadoraService'
+import sesionTransferenciaService from '../services/sesionTransferenciaService'
 
 export default function TransferenciaPage() {
   const navigate = useNavigate()
   const { transferencias, setTransferencias, addTransferencia, updateTransferencia, removeTransferencia } = useTransferenciaStore()
   const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm()
+  const { register: registerSesion, handleSubmit: handleSubmitSesion, reset: resetSesion, formState: { errors: sesionErrors } } = useForm()
   const [selectedDonadora, setSelectedDonadora] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [donadorasMap, setDonadorasMap] = useState({})
   const [loading, setLoading] = useState(false)
+  const [loadingSesion, setLoadingSesion] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showSesionForm, setShowSesionForm] = useState(false)
   const [donadorasList, setDonadorasList] = useState([])
   const [donadoraSearch, setDonadoraSearch] = useState('')
   const [showDonadoraModal, setShowDonadoraModal] = useState(false)
+  const [sesiones, setSesiones] = useState([])
+  const [selectedSesionId, setSelectedSesionId] = useState(null)
   const isSubmittingRef = useRef(false)
 
   useEffect(() => {
-    loadData()
+    loadSesionesTransferencia()
     preloadDonadoras()
     loadDonadoras()
   }, [])
@@ -56,10 +62,12 @@ export default function TransferenciaPage() {
   }, [donadoraSearch, donadorasList])
 
   const nextNumeroSecuencial = useMemo(() => {
-    if (!transferencias || transferencias.length === 0) return 1
-    return Math.max(...transferencias.map(t => Number(t.numero_secuencial) || 0)) + 1
-    // se calcula por max actual + 1
-  }, [transferencias])
+    const filtered = selectedSesionId
+      ? transferencias.filter(t => t.sesion_transferencia_id === selectedSesionId)
+      : transferencias
+    if (!filtered || filtered.length === 0) return 1
+    return Math.max(...filtered.map(t => Number(t.numero_secuencial) || 0)) + 1
+  }, [transferencias, selectedSesionId])
 
   const handleSelectDonadora = (donadora) => {
     setSelectedDonadora(donadora)
@@ -67,19 +75,50 @@ export default function TransferenciaPage() {
     setDonadoraSearch('')
   }
 
-  const loadData = async () => {
+  const loadSesionesTransferencia = async () => {
     try {
-      const data = await transferenciaService.getAll()
-      setTransferencias(data)
+      const data = await sesionTransferenciaService.getAll()
+      setSesiones(data)
+      const allTransferencias = (data || []).flatMap(s => (s.transferencias_realizadas || []).map(t => ({
+        ...t,
+        sesion_transferencia_id: s.id,
+        sesion_fecha: s.fecha,
+        sesion_tecnico: s.tecnico_transferencia
+      })))
+      setTransferencias(allTransferencias)
+      if (!selectedSesionId && data.length > 0) {
+        setSelectedSesionId(data[0].id)
+      }
     } catch (error) {
-      console.error('Error cargando transferencias', error)
+      console.error('Error cargando sesiones de transferencia', error)
+    }
+  }
+
+  const onSubmitSesion = async (data) => {
+    setLoadingSesion(true)
+    try {
+      const created = await sesionTransferenciaService.create(data)
+      await loadSesionesTransferencia()
+      setSelectedSesionId(created.id)
+      resetSesion()
+      setShowSesionForm(false)
+      alert('Sesión de transferencia creada')
+    } catch (error) {
+      console.error(error)
+      alert('No se pudo crear la sesión')
+    } finally {
+      setLoadingSesion(false)
     }
   }
 
   const onSubmit = async (data) => {
-    // Prevenir envÃ­os concurrentes (doble clic)
+    // Prevenir envios concurrentes (doble clic)
     if (isSubmittingRef.current) {
-      console.warn('Ya hay un envÃ­o en progreso, ignorando...')
+      console.warn("Ya hay un envio en progreso, ignorando...")
+      return
+    }
+    if (!selectedSesionId) {
+      alert("Selecciona o crea una sesión de transferencia primero")
       return
     }
 
@@ -88,9 +127,9 @@ export default function TransferenciaPage() {
     const payload = {
       ...data,
       numero_secuencial: parseInt(data.numero_secuencial, 10),
-      donadora_id: selectedDonadora?.id || null
+      donadora_id: selectedDonadora?.id || null,
+      sesion_transferencia_id: selectedSesionId
     }
-
     try {
       if (editingId) {
         const updated = await transferenciaService.update(editingId, payload)
@@ -101,6 +140,7 @@ export default function TransferenciaPage() {
         addTransferencia(created)
         alert('Transferencia registrada')
       }
+      await loadSesionesTransferencia()
       reset()
       setSelectedDonadora(null)
       setEditingId(null)
@@ -115,25 +155,10 @@ export default function TransferenciaPage() {
   }
 
   // Agrupar transferencias por fecha de creaciÃ³n (sesiones)
-  const sesiones = useMemo(() => {
-    const grupos = {}
-    transferencias.forEach(t => {
-      const fecha = new Date(t.fecha_creacion).toISOString().split('T')[0]
-      if (!grupos[fecha]) {
-        grupos[fecha] = {
-          fecha,
-          transferencias: []
-        }
-      }
-      const donadora = donadorasMap[t.donadora_id]
-      grupos[fecha].transferencias.push({ ...t, donadora })
-    })
-    return Object.values(grupos).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-  }, [transferencias, donadorasMap])
-
   const handleEdit = async (transferencia) => {
     setEditingId(transferencia.id)
     setShowForm(true)
+    setSelectedSesionId(transferencia.sesion_transferencia_id || null)
     reset({
       numero_secuencial: transferencia.numero_secuencial,
       fecha: transferencia.fecha ? transferencia.fecha.split('T')[0] : '',
@@ -171,76 +196,133 @@ export default function TransferenciaPage() {
   }
 
   const handleEditSesion = async (sesion) => {
-    // Abrir formulario para permitir agregar/editar transferencias de esta sesiÃ³n
+    // Abrir formulario para permitir agregar/editar transferencias de esta sesión
     setShowForm(true)
+    setSelectedSesionId(sesion.id)
+    const lista = sesion.transferencias_realizadas || []
+    const nextNum = lista.length > 0 ? Math.max(...lista.map(t => Number(t.numero_secuencial) || 0)) + 1 : 1
     // Limpiar formulario
     reset({
-      numero_secuencial: 1,
-      toro: '',
-      raza_toro: '',
-      estado: '',
-      receptora: '',
-      ciclado_izquierdo: '',
-      ciclado_derecho: '',
-      observaciones: ''
+      numero_secuencial: nextNum,
+      fecha: "",
+      tecnico_transferencia: "",
+      cliente: "",
+      finalidad: "",
+      toro: "",
+      raza_toro: "",
+      estado: "",
+      receptora: "",
+      ciclado_izquierdo: "",
+      ciclado_derecho: "",
+      observaciones: ""
     })
     setSelectedDonadora(null)
     setEditingId(null)
-  }
-
-  const handleDeleteSesion = async (sesion) => {
-    const mensaje = `Â¿Eliminar toda la sesiÃ³n del ${new Date(sesion.fecha).toLocaleDateString()} con ${sesion.transferencias.length} transferencias?`
-    if (!window.confirm(mensaje)) return
-
-    try {
-      // Eliminar todas las transferencias de la sesiÃ³n
-      await Promise.all(sesion.transferencias.map(t => transferenciaService.delete(t.id)))
-
-      // Actualizar el store
-      sesion.transferencias.forEach(t => removeTransferencia(t.id))
-
-      alert('SesiÃ³n eliminada correctamente')
-    } catch (error) {
-      console.error(error)
-      alert('Error al eliminar la sesiÃ³n')
-    }
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">MÃ³dulo de Transferencia de Embriones</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Modulo de Transferencia de Embriones</h1>
           <p className="text-gray-600">Gestiona sesiones de transferencia</p>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(!showForm)
-            if (!showForm) {
-              reset({
-                numero_secuencial: nextNumeroSecuencial,
-                fecha: '',
-                tecnico_transferencia: '',
-                cliente: '',
-                finalidad: '',
-                toro: '',
-                raza_toro: '',
-                estado: '',
-                receptora: '',
-                ciclado_izquierdo: '',
-                ciclado_derecho: '',
-                observaciones: ''
-              })
-              setSelectedDonadora(null)
-              setEditingId(null)
-            }
-          }}
-          className="btn-primary flex items-center space-x-2 self-start md:self-center"
-        >
-          {showForm ? <X size={18} /> : <Plus size={18} />}
-          <span>{showForm ? 'Cerrar formulario' : 'Nueva transferencia'}</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowSesionForm(!showSesionForm)}
+            className="btn-secondary flex items-center space-x-2 self-start md:self-center"
+          >
+            {showSesionForm ? <X size={18} /> : <Plus size={18} />}
+            <span>{showSesionForm ? "Cerrar sesion" : "Nueva sesion"}</span>
+          </button>
+          <button
+            onClick={() => {
+              setShowForm(!showForm)
+              if (!showForm) {
+                setSelectedSesionId(selectedSesionId || (sesiones[0]?.id ?? null))
+                reset({
+                  numero_secuencial: nextNumeroSecuencial,
+                  fecha: "",
+                  tecnico_transferencia: "",
+                  cliente: "",
+                  finalidad: "",
+                  toro: "",
+                  raza_toro: "",
+                  estado: "",
+                  receptora: "",
+                  ciclado_izquierdo: "",
+                  ciclado_derecho: "",
+                  observaciones: ""
+                })
+                setSelectedDonadora(null)
+                setEditingId(null)
+              }
+            }}
+            className="btn-primary flex items-center space-x-2 self-start md:self-center"
+          >
+            {showForm ? <X size={18} /> : <Plus size={18} />}
+            <span>{showForm ? "Cerrar formulario" : "Nueva transferencia"}</span>
+          </button>
+        </div>
       </div>
+
+      {showSesionForm && (
+        <div className="card">
+            <h2 className="text-xl font-semibold mb-4">Registrar sesion de transferencia</h2>
+          <form onSubmit={handleSubmitSesion(onSubmitSesion)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+              <div className="flex gap-2">
+                <input type="date" className="input-field flex-1" {...registerSesion("fecha", { required: true })} />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    const today = new Date().toISOString().split("T")[0]
+                    resetSesion({ fecha: today })
+                  }}
+                >
+                  Hoy
+                </button>
+              </div>
+              {sesionErrors.fecha && <p className="text-red-500 text-sm">Fecha requerida</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tecnico de transferencia</label>
+              <input className="input-field" {...registerSesion("tecnico_transferencia", { required: true })} />
+              {sesionErrors.tecnico_transferencia && <p className="text-red-500 text-sm">Campo requerido</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+              <input className="input-field" {...registerSesion("cliente", { required: true })} />
+              {sesionErrors.cliente && <p className="text-red-500 text-sm">Campo requerido</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Receptoras</label>
+              <input className="input-field" {...registerSesion("receptoras")} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hora inicio</label>
+              <input className="input-field" {...registerSesion("hora_inicio")} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hora final</label>
+              <input className="input-field" {...registerSesion("hora_final")} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hacienda</label>
+              <input className="input-field" {...registerSesion("hacienda")} />
+            </div>
+            <div className="md:col-span-2 flex space-x-3">
+              <button type="submit" className="btn-primary flex items-center space-x-2" disabled={loadingSesion}>
+                <Save size={18} />
+                <span>{loadingSesion ? "Guardando..." : "Guardar sesión"}</span>
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => { resetSesion(); setShowSesionForm(false) }}>Cancelar</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {showForm && (
         <div className="card mb-6">
@@ -276,6 +358,21 @@ export default function TransferenciaPage() {
                 </button>
               )}
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sesión</label>
+              <select
+                className="input-field"
+                value={selectedSesionId || ''}
+                onChange={(e) => setSelectedSesionId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">Seleccione sesión</option>
+                {sesiones.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.fecha} - {s.tecnico_transferencia}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">N° secuencial *</label>
@@ -307,7 +404,7 @@ export default function TransferenciaPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Técnico de transferencia</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tecnico de transferencia</label>
               <input className="input-field" {...register('tecnico_transferencia')} />
             </div>
 
@@ -388,7 +485,7 @@ export default function TransferenciaPage() {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Sesiones de Transferencia</h2>
-            <button onClick={loadData} className="btn-secondary">Refrescar</button>
+            <button onClick={loadSesionesTransferencia} className="btn-secondary">Refrescar</button>
           </div>
 
           {sesiones.length === 0 ? (
@@ -396,9 +493,10 @@ export default function TransferenciaPage() {
           ) : (
             <div className="space-y-4">
               {sesiones.map((sesion, idx) => {
-                const totalTransferencias = sesion.transferencias.length
-                const conDonadora = sesion.transferencias.filter(t => t.donadora_id).length
-                const estados = new Set(sesion.transferencias.filter(t => t.estado).map(t => t.estado)).size
+                const lista = sesion.transferencias_realizadas || []
+                const totalTransferencias = lista.length
+                const conDonadora = lista.filter(t => t.donadora_id).length
+                const estados = new Set(lista.filter(t => t.estado).map(t => t.estado)).size
 
                 return (
                   <div
@@ -434,6 +532,34 @@ export default function TransferenciaPage() {
                           <span>Ver Detalles</span>
                         </button>
                         <button
+                          onClick={() => {
+                            setSelectedSesionId(sesion.id)
+                            setShowForm(true)
+                            const listaSel = sesion.transferencias_realizadas || []
+                            const nextNumSel = listaSel.length > 0 ? Math.max(...listaSel.map(t => Number(t.numero_secuencial) || 0)) + 1 : 1
+                            reset({
+                              numero_secuencial: nextNumSel,
+                              fecha: "",
+                              tecnico_transferencia: "",
+                              cliente: "",
+                              finalidad: "",
+                              toro: "",
+                              raza_toro: "",
+                              estado: "",
+                              receptora: "",
+                              ciclado_izquierdo: "",
+                              ciclado_derecho: "",
+                              observaciones: ""
+                            })
+                            setSelectedDonadora(null)
+                            setEditingId(null)
+                          }}
+                          className="btn-secondary flex items-center gap-1.5 px-3 py-2 text-sm"
+                        >
+                          <Plus size={16} />
+                          <span>Agregar transf.</span>
+                        </button>
+                        <button
                           onClick={() => handleDeleteSesion(sesion)}
                           className="px-3 py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg border border-red-200 transition-colors flex items-center gap-1.5 font-medium"
                         >
@@ -463,6 +589,39 @@ export default function TransferenciaPage() {
                         </p>
                       </div>
                     </div>
+                    {lista.length > 0 && (
+                      <div className="mt-4 overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-3 py-2 text-left">Nº</th>
+                              <th className="px-3 py-2 text-left">Donadora</th>
+                              <th className="px-3 py-2 text-left">Toro</th>
+                              <th className="px-3 py-2 text-left">Receptora</th>
+                              <th className="px-3 py-2 text-left">Estado</th>
+                              <th className="px-3 py-2 text-left">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {lista.map((t) => (
+                              <tr key={t.id}>
+                                <td className="px-3 py-2">{t.numero_secuencial}</td>
+                                <td className="px-3 py-2">{t.donadora_id && donadorasMap[t.donadora_id] ? donadorasMap[t.donadora_id].nombre : '—'}</td>
+                                <td className="px-3 py-2">{t.toro || '—'}</td>
+                                <td className="px-3 py-2">{t.receptora || '—'}</td>
+                                <td className="px-3 py-2">{t.estado || '—'}</td>
+                                <td className="px-3 py-2">
+                                  <div className="flex gap-2">
+                                    <button className="text-blue-600 hover:text-blue-800 text-xs" onClick={() => handleEdit({ ...t, sesion_transferencia_id: sesion.id })}>Editar</button>
+                                    <button className="text-red-600 hover:text-red-800 text-xs" onClick={() => handleDelete(t.id)}>Eliminar</button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -569,8 +728,3 @@ export default function TransferenciaPage() {
     </div>
   )
 }
-
-
-
-
-

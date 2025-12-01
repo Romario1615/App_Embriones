@@ -535,3 +535,104 @@ INFO:     Started server process [15040]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 WARNING:  WatchFiles detected changes in 'app\main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [15040]
+INFO:     Started server process [21936]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tmp_migrate_render.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [21936]
+WARNING:  WatchFiles detected changes in 'venv\Lib\site-packages\psycopg\_typeinfo.py', 'venv\Lib\site-packages\psycopg\types\datetime.py', 'venv\Lib\site-packages\psycopg\_cmodule.py', 'venv\Lib\site-packages\psycopg\cursor_async.py', 'venv\Lib\site-packages\psycopg\_copy_base.py', 'venv\Lib\site-packages\psycopg\pq\__init__.py', 'venv\Lib\site-packages\psycopg\conninfo.py', 'venv\Lib\site-packages\psycopg\pq\_debug.py', 'venv\Lib\site-packages\psycopg\_pipeline_base.py', 'venv\Lib\site-packages\psycopg\_conninfo_attempts.py', 'venv\Lib\site-packages\psycopg\_pipeline_async.py', 'venv\Lib\site-packages\psycopg\types\composite.py', 'venv\Lib\site-packages\psycopg\_enums.py', 'venv\Lib\site-packages\psycopg\dbapi20.py', 'venv\Lib\site-packages\psycopg\_conninfo_attempts_async.py', 'venv\Lib\site-packages\psycopg_binary\version.py', 'venv\Lib\site-packages\psycopg\client_cursor.py', 'venv\Lib\site-packages\psycopg\copy.py', 'venv\Lib\site-packages\psycopg\types\array.py', 'venv\Lib\site-packages\psycopg\_connection_info.py', 'venv\Lib\site-packages\psycopg\types\enum.py', 'venv\Lib\site-packages\psycopg\_compat.py', 'venv\Lib\site-packages\psycopg_binary\__init__.py', 'venv\Lib\site-packages\psycopg\_encodings.py', 'venv\Lib\site-packages\psycopg\types\numpy.py', 'venv\Lib\site-packages\psycopg\connection.py', 'venv\Lib\site-packages\psycopg\_py_transformer.py', 'venv\Lib\site-packages\psycopg\abc.py', 'venv\Lib\site-packages\psycopg\version.py', 'venv\Lib\site-packages\psycopg\_conninfo_utils.py', 'tmp_migrate_render.py', 'venv\Lib\site-packages\psycopg\_copy.py', 'venv\Lib\site-packages\psycopg\_capabilities.py', 'venv\Lib\site-packages\psycopg\__init__.py', 'venv\Lib\site-packages\psycopg\types\net.py', 'venv\Lib\site-packages\psycopg\types\none.py', 'venv\Lib\site-packages\psycopg\_column.py', 'venv\Lib\site-packages\psycopg_binary\_uuid.py', 'venv\Lib\site-packages\psycopg\_typemod.py', 'venv\Lib\site-packages\psycopg\_preparing.py', 'venv\Lib\site-packages\psycopg\rows.py', 'venv\Lib\site-packages\psycopg\_queries.py', 'venv\Lib\site-packages\psycopg\errors.py', 'venv\Lib\site-packages\psycopg\_cursor_base.py', 'venv\Lib\site-packages\psycopg\_oids.py', 'venv\Lib\site-packages\psycopg\_pipeline.py', 'venv\Lib\site-packages\psycopg\types\numeric.py', 'venv\Lib\site-packages\psycopg\sql.py', 'venv\Lib\site-packages\psycopg\_server_cursor_base.py', 'venv\Lib\site-packages\psycopg\raw_cursor.py', 'venv\Lib\site-packages\psycopg\connection_async.py', 'venv\Lib\site-packages\psycopg\types\shapely.py', 'venv\Lib\site-packages\psycopg\transaction.py', 'venv\Lib\site-packages\psycopg\_connection_base.py', 'venv\Lib\site-packages\psycopg\types\range.py', 'venv\Lib\site-packages\psycopg\cursor.py', 'venv\Lib\site-packages\psycopg\_wrappers.py', 'venv\Lib\site-packages\psycopg\adapt.py', 'venv\Lib\site-packages\psycopg\types\__init__.py', 'venv\Lib\site-packages\psycopg\types\json.py', 'venv\Lib\site-packages\psycopg\pq\misc.py', 'venv\Lib\site-packages\psycopg\generators.py', 'venv\Lib\site-packages\psycopg\types\multirange.py', 'venv\Lib\site-packages\psycopg\crdb\_types.py', 'venv\Lib\site-packages\psycopg\_struct.py', 'venv\Lib\site-packages\psycopg\types\bool.py', 'venv\Lib\site-packages\psycopg\postgres.py', 'venv\Lib\site-packages\psycopg\types\hstore.py', 'venv\Lib\site-packages\psycopg\pq\_pq_ctypes.py', 'venv\Lib\site-packages\psycopg\_tpc.py', 'venv\Lib\site-packages\psycopg\types\string.py', 'venv\Lib\site-packages\psycopg\pq\pq_ctypes.py', 'venv\Lib\site-packages\psycopg\pq\_enums.py', 'venv\Lib\site-packages\psycopg\crdb\connection.py', 'venv\Lib\site-packages\psycopg\_tz.py', 'venv\Lib\site-packages\psycopg\_copy_async.py', 'venv\Lib\site-packages\psycopg\_adapters_map.py', 'venv\Lib\site-packages\psycopg\_acompat.py', 'venv\Lib\site-packages\psycopg\waiting.py', 'venv\Lib\site-packages\psycopg\crdb\__init__.py', 'venv\Lib\site-packages\psycopg\_server_cursor.py', 'venv\Lib\site-packages\psycopg\types\uuid.py', 'venv\Lib\site-packages\psycopg\pq\abc.py', 'venv\Lib\site-packages\psycopg\_transformer.py', 'venv\Lib\site-packages\psycopg\_dns.py', 'venv\Lib\site-packages\psycopg\_server_cursor_async.py'. Reloading...
+INFO:     Started server process [29104]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 123, in run
+    raise KeyboardInterrupt()
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Documentos\Aplicacion Embriones\backend\venv\Lib\site-packages\starlette\routing.py", line 700, in lifespan
+    await receive()
+  File "D:\Documentos\Aplicacion Embriones\backend\venv\Lib\site-packages\uvicorn\lifespan\on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+INFO:     Started server process [23112]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\application\schemas\sesion_transferencia_schema.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [23112]
+WARNING:  WatchFiles detected changes in 'app\presentation\api\v1\endpoints\__init__.py', 'app\presentation\api\v1\endpoints\sesion_transferencia.py', 'app\presentation\api\v1\router.py', 'app\infrastructure\repositories\sesion_transferencia_repository.py'. Reloading...
+INFO:     Started server process [11028]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 190, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 123, in run
+    raise KeyboardInterrupt()
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Documentos\Aplicacion Embriones\backend\venv\Lib\site-packages\starlette\routing.py", line 700, in lifespan
+    await receive()
+  File "D:\Documentos\Aplicacion Embriones\backend\venv\Lib\site-packages\uvicorn\lifespan\on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+INFO:     Started server process [25436]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tmp_migrate_render.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [25436]
+INFO:     Started server process [7804]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
