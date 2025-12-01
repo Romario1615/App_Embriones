@@ -26,7 +26,7 @@ async def create_sesion_transferencia(
     repo = SesionTransferenciaRepository(db)
     sesion = SesionTransferencia(**data.model_dump())
     created = await repo.create(sesion)
-    return created
+    return await repo.get_by_id_with_transferencias(created.id)
 
 
 @router.get("/", response_model=List[SesionTransferenciaResponse])
