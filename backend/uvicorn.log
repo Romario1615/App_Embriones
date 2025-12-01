@@ -199,3 +199,29 @@
 2025-12-01 01:26:47,028 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("drafts")
 2025-12-01 01:26:47,028 INFO sqlalchemy.engine.Engine [raw sql] ()
 2025-12-01 01:26:47,028 INFO sqlalchemy.engine.Engine COMMIT
+[OK] Base de datos inicializada
+[*] Cerrando aplicacion...
+[OK] Conexiones cerradas
+[*] Iniciando aplicacion...
+2025-12-01 05:15:04,318 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-12-01 05:15:04,319 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("usuarios")
+2025-12-01 05:15:04,319 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,320 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("donadoras")
+2025-12-01 05:15:04,320 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,321 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("sesiones_opu")
+2025-12-01 05:15:04,321 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,322 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("extraccion_donadoras")
+2025-12-01 05:15:04,322 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,323 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("fecundaciones")
+2025-12-01 05:15:04,323 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,324 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("sesiones_transferencia")
+2025-12-01 05:15:04,324 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,325 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("transferencias_realizadas")
+2025-12-01 05:15:04,325 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,327 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("chequeos_gfe")
+2025-12-01 05:15:04,327 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,328 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("fotos")
+2025-12-01 05:15:04,328 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,329 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("drafts")
+2025-12-01 05:15:04,329 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-12-01 05:15:04,330 INFO sqlalchemy.engine.Engine COMMIT

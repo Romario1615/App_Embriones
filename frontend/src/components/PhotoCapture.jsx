@@ -12,6 +12,7 @@ export default function PhotoCapture({ photos = [], onChange, maxPhotos = 6 }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
 
   // Iniciar cámara
   const startCamera = async () => {
@@ -137,11 +138,30 @@ export default function PhotoCapture({ photos = [], onChange, maxPhotos = 6 }) {
             <span>Subir Archivo</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <Camera size={18} />
+            <span>Tomar con cámara</span>
+          </button>
+
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
             multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          {/* Botón que abre directamente la cámara del dispositivo (mobile friendly) */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
             onChange={handleFileSelect}
             className="hidden"
           />
