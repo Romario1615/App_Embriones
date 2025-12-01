@@ -404,6 +404,9 @@ export default function OPUPage() {
       medio: detail.medio || '',
       hacienda: detail.hacienda || '',
       lote: detail.lote || '',
+      hora_inicio: detail.hora_inicio || '',
+      hora_final: detail.hora_final || '',
+      receptoras: detail.receptoras || '',
       finalidad: detail.finalidad || 'fresco',
       observaciones: detail.observaciones || ''
     })
