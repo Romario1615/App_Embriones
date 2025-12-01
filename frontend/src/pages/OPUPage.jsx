@@ -325,6 +325,27 @@ export default function OPUPage() {
     }
   }
 
+  // Cargar fotos on-demand para ver una extraccion
+  const loadFotosExtraccion = async (ext) => {
+    const extraccionId = ext.extraccion_id || ext.id
+    if (!extraccionId) return ext
+    try {
+      const data = await fotoService.getByEntidad('extraccion', extraccionId)
+      const fotos = (data?.fotos || []).map((f, idx) => ({
+        id: f.id,
+        preview: f.thumbnail_url || f.url,
+        url: f.url,
+        name: f.descripcion || `Foto ${f.orden ?? idx + 1}`,
+        existente: true,
+        fotoId: f.id
+      }))
+      return { ...ext, fotos }
+    } catch (error) {
+      console.error('No se pudieron cargar fotos de la extraccion', extraccionId, error)
+      return ext
+    }
+  }
+
   const mapExtraccionesFromApi = (list, donas = donadorasList) => {
     return (list || []).map((ext, idx) => {
       const found = donas.find(d => d.id === ext.donadora_id)
@@ -1567,14 +1588,17 @@ export default function OPUPage() {
                         <td className="px-3 py-2">{ext.irregular}</td>
                         <td className="px-3 py-2 font-semibold">{calcTotalViables(ext)}</td>
                         <td className="px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setViewExtraccion(ext)}
-                              className="text-blue-600 hover:text-blue-800 text-sm"
-                            >
-                              Ver
-                            </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const withFotos = await loadFotosExtraccion(ext)
+                            setViewExtraccion(withFotos)
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          Ver
+                        </button>
                             <button
                               type="button"
                               onClick={() => editExtraccion(idx)}
