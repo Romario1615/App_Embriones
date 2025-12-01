@@ -9,7 +9,7 @@ import donadoraService from '../services/donadoraService'
 export default function TransferenciaPage() {
   const navigate = useNavigate()
   const { transferencias, setTransferencias, addTransferencia, updateTransferencia, removeTransferencia } = useTransferenciaStore()
-  const { register, handleSubmit, reset, formState: { errors } } = useForm()
+  const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm()
   const [selectedDonadora, setSelectedDonadora] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [donadorasMap, setDonadorasMap] = useState({})
@@ -54,6 +54,12 @@ export default function TransferenciaPage() {
       `${d.nombre} ${d.numero_registro}`.toLowerCase().includes(term)
     )
   }, [donadoraSearch, donadorasList])
+
+  const nextNumeroSecuencial = useMemo(() => {
+    if (!transferencias || transferencias.length === 0) return 1
+    return Math.max(...transferencias.map(t => Number(t.numero_secuencial) || 0)) + 1
+    // se calcula por max actual + 1
+  }, [transferencias])
 
   const handleSelectDonadora = (donadora) => {
     setSelectedDonadora(donadora)
@@ -127,11 +133,16 @@ export default function TransferenciaPage() {
 
   const handleEdit = async (transferencia) => {
     setEditingId(transferencia.id)
+    setShowForm(true)
     reset({
       numero_secuencial: transferencia.numero_secuencial,
+      fecha: transferencia.fecha ? transferencia.fecha.split('T')[0] : '',
+      tecnico_transferencia: transferencia.tecnico_transferencia || '',
+      cliente: transferencia.cliente || '',
+      finalidad: transferencia.finalidad || '',
       toro: transferencia.toro || '',
       raza_toro: transferencia.raza_toro || '',
-      estadio: transferencia.estadio || '',
+      estado: transferencia.estado || '',
       receptora: transferencia.receptora || '',
       ciclado_izquierdo: transferencia.ciclado_izquierdo || '',
       ciclado_derecho: transferencia.ciclado_derecho || '',
@@ -167,7 +178,7 @@ export default function TransferenciaPage() {
       numero_secuencial: 1,
       toro: '',
       raza_toro: '',
-      estadio: '',
+      estado: '',
       receptora: '',
       ciclado_izquierdo: '',
       ciclado_derecho: '',
@@ -206,7 +217,20 @@ export default function TransferenciaPage() {
           onClick={() => {
             setShowForm(!showForm)
             if (!showForm) {
-              reset()
+              reset({
+                numero_secuencial: nextNumeroSecuencial,
+                fecha: '',
+                tecnico_transferencia: '',
+                cliente: '',
+                finalidad: '',
+                toro: '',
+                raza_toro: '',
+                estado: '',
+                receptora: '',
+                ciclado_izquierdo: '',
+                ciclado_derecho: '',
+                observaciones: ''
+              })
               setSelectedDonadora(null)
               setEditingId(null)
             }
@@ -254,13 +278,51 @@ export default function TransferenciaPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">N° secuencial *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nº secuencial *</label>
               <input
                 type="number"
                 className="input-field"
                 {...register('numero_secuencial', { required: 'Campo requerido', min: 1 })}
+                defaultValue={nextNumeroSecuencial}
+                readOnly
               />
               {errors.numero_secuencial && <p className="text-red-500 text-sm">{errors.numero_secuencial.message}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+              <div className="flex gap-2">
+                <input type="date" className="input-field flex-1" {...register('fecha')} />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    const today = new Date().toISOString().split('T')[0]
+                    setValue('fecha', today)
+                  }}
+                >
+                  Hoy
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Técnico de transferencia</label>
+              <input className="input-field" {...register('tecnico_transferencia')} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+              <input className="input-field" {...register('cliente')} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Finalidad</label>
+              <select className="input-field" {...register('finalidad')}>
+                <option value="">Seleccione</option>
+                <option value="Fresh">Fresh</option>
+                <option value="VIT">VIT</option>
+              </select>
             </div>
 
             <div>
@@ -274,12 +336,12 @@ export default function TransferenciaPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Estadio</label>
-              <input className="input-field" {...register('estadio')} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+              <input className="input-field" {...register('estado')} />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Receptora</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Receptoras</label>
               <input className="input-field" {...register('receptora')} />
             </div>
 
@@ -335,7 +397,7 @@ export default function TransferenciaPage() {
               {sesiones.map((sesion, idx) => {
                 const totalTransferencias = sesion.transferencias.length
                 const conDonadora = sesion.transferencias.filter(t => t.donadora_id).length
-                const estadios = new Set(sesion.transferencias.filter(t => t.estadio).map(t => t.estadio)).size
+                const estados = new Set(sesion.transferencias.filter(t => t.estado).map(t => t.estado)).size
 
                 return (
                   <div
@@ -390,8 +452,8 @@ export default function TransferenciaPage() {
                         <p className="text-2xl font-bold text-purple-900">{conDonadora}</p>
                       </div>
                       <div className="bg-white/70 rounded-lg p-3 border border-blue-100">
-                        <p className="text-xs text-blue-700 font-semibold uppercase mb-1">Estadios</p>
-                        <p className="text-2xl font-bold text-blue-900">{estadios}</p>
+                        <p className="text-xs text-blue-700 font-semibold uppercase mb-1">estados</p>
+                        <p className="text-2xl font-bold text-blue-900">{estados}</p>
                       </div>
                       <div className="bg-white/70 rounded-lg p-3 border border-cyan-100">
                         <p className="text-xs text-cyan-700 font-semibold uppercase mb-1">Tasa</p>
@@ -506,3 +568,9 @@ export default function TransferenciaPage() {
     </div>
   )
 }
+
+
+
+
+
+

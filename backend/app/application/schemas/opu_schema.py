@@ -24,6 +24,7 @@ class ExtraccionBase(BaseModel):
     grado_3: int = 0
     desnudos: int = 0
     irregular: int = 0
+    observaciones: Optional[str] = None
     foto_ruta: Optional[str] = None
     foto_thumbnail: Optional[str] = None
     foto_public_id: Optional[str] = None

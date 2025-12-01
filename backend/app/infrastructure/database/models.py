@@ -147,6 +147,7 @@ class ExtraccionDonadora(Base):
     grado_3 = Column(Integer, default=0, nullable=False)
     desnudos = Column(Integer, default=0, nullable=False)
     irregular = Column(Integer, default=0, nullable=False)
+    observaciones = Column(Text, nullable=True)
 
     # Fotos de la extraccion (Cloudinary)
     foto_ruta = Column(String(500), nullable=True)
@@ -233,11 +234,15 @@ class TransferenciaRealizada(Base):
     donadora_id = Column(Integer, ForeignKey("donadoras.id"), nullable=True)
     toro = Column(String(100), nullable=True)
     raza_toro = Column(String(50), nullable=True)
-    estadio = Column(String(50), nullable=True)
+    estado = Column(String(50), nullable=True)
     receptora = Column(String(100), nullable=True)
     ciclado_izquierdo = Column(String(50), nullable=True)
     ciclado_derecho = Column(String(50), nullable=True)
     observaciones = Column(Text, nullable=True)
+    fecha = Column(Date, nullable=True)
+    tecnico_transferencia = Column(String(100), nullable=True)
+    cliente = Column(String(100), nullable=True)
+    finalidad = Column(String(20), nullable=True)  # 'Fresh' o 'VIT'
 
     # Relaciones
     sesion = relationship("SesionTransferencia", back_populates="transferencias_realizadas")

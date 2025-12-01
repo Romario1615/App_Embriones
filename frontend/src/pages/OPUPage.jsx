@@ -26,6 +26,7 @@ const emptyExtraccion = {
   grado_3: 0,
   desnudos: 0,
   irregular: 0,
+  observaciones: '',
   nueva: false,
   nueva_nombre: '',
   nueva_registro: '',
@@ -343,6 +344,7 @@ export default function OPUPage() {
         grado_3: ext.grado_3 ?? 0,
         desnudos: ext.desnudos ?? 0,
         irregular: ext.irregular ?? 0,
+        observaciones: ext.observaciones || '',
         nueva: false,
         donadora: found || (ext.donadora_id ? { id: ext.donadora_id, nombre: `ID ${ext.donadora_id}`, numero_registro: '-' } : null),
         donadora_id: ext.donadora_id || found?.id || null,
@@ -430,7 +432,8 @@ export default function OPUPage() {
             grado_2: Number(ext.grado_2) || 0,
             grado_3: Number(ext.grado_3) || 0,
             desnudos: Number(ext.desnudos) || 0,
-            irregular: Number(ext.irregular) || 0
+            irregular: Number(ext.irregular) || 0,
+            observaciones: ext.observaciones?.trim() || null
           }
 
           if (ext.nueva) {
@@ -1487,6 +1490,17 @@ export default function OPUPage() {
                 photos={extrForm.fotos || []}
                 onChange={(fotos) => setExtrForm({ ...extrForm, fotos })}
                 maxPhotos={6}
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones de la extracción</label>
+              <textarea
+                value={extrForm.observaciones}
+                onChange={(e) => setExtrForm({ ...extrForm, observaciones: e.target.value })}
+                className="input-field"
+                rows={3}
+                placeholder="Notas u observaciones relevantes"
               />
             </div>
 

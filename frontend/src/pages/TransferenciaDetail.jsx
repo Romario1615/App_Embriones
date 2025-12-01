@@ -51,16 +51,16 @@ export default function TransferenciaDetail() {
 
     const totalTransferencias = transferencias.length
 
-    // Estadios
-    const estadios = {}
+    // estados
+    const estados = {}
     transferencias.forEach(t => {
-      if (t.estadio) {
-        estadios[t.estadio] = (estadios[t.estadio] || 0) + 1
+      if (t.estado) {
+        estados[t.estado] = (estados[t.estado] || 0) + 1
       }
     })
 
-    const estadioMasComun = Object.keys(estadios).length > 0
-      ? Object.entries(estadios).sort((a, b) => b[1] - a[1])[0][0]
+    const estadoMasComun = Object.keys(estados).length > 0
+      ? Object.entries(estados).sort((a, b) => b[1] - a[1])[0][0]
       : 'N/A'
 
     // Receptoras únicas
@@ -102,8 +102,8 @@ export default function TransferenciaDetail() {
       .slice(0, 3)
 
     // Datos para gráficos
-    const estadiosData = Object.entries(estadios).map(([estadio, count]) => ({
-      x: estadio,
+    const estadosData = Object.entries(estados).map(([estado, count]) => ({
+      x: estado,
       y: count
     }))
 
@@ -124,12 +124,12 @@ export default function TransferenciaDetail() {
 
     return {
       totalTransferencias,
-      estadioMasComun,
+      estadoMasComun,
       receptorasUnicas,
       donadorasUnicas,
       toroMasUsado,
       topDonadoras,
-      estadiosData,
+      estadosData,
       torosData,
       cicladoData
     }
@@ -186,12 +186,12 @@ export default function TransferenciaDetail() {
           </div>
 
           <div className="bg-gradient-to-br from-cyan-50 to-cyan-100/50 rounded-xl p-3.5 border border-cyan-200 hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-            <p className="text-xs font-semibold text-cyan-700 mb-1.5 uppercase tracking-wide">Estadio más común</p>
+            <p className="text-xs font-semibold text-cyan-700 mb-1.5 uppercase tracking-wide">estado más común</p>
             <div className="flex items-center gap-2.5">
               <div className="bg-cyan-600 p-2 rounded-lg shadow-sm">
                 <Target size={18} className="text-white" />
               </div>
-              <span className="text-base font-bold text-gray-900">{stats?.estadioMasComun}</span>
+              <span className="text-base font-bold text-gray-900">{stats?.estadoMasComun}</span>
             </div>
           </div>
 
@@ -285,15 +285,15 @@ export default function TransferenciaDetail() {
 
           {/* Gráficos */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Gráfico de Estadios */}
-            {stats.estadiosData.length > 0 && (
+            {/* Gráfico de estados */}
+            {stats.estadosData.length > 0 && (
               <div className="card shadow-lg hover:shadow-xl transition-shadow duration-300 bg-gradient-to-br from-white to-teal-50/30">
                 <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
                   <span className="text-2xl">📊</span>
-                  <span className="bg-gradient-to-r from-teal-600 to-cyan-700 bg-clip-text text-transparent">Distribución por Estadio</span>
+                  <span className="bg-gradient-to-r from-teal-600 to-cyan-700 bg-clip-text text-transparent">Distribución por estado</span>
                 </h3>
                 <p className="text-xs text-gray-600 mb-2">
-                  Estadios embrionarios utilizados ({stats.estadiosData.length} tipos)
+                  estados embrionarios utilizados ({stats.estadosData.length} tipos)
                 </p>
                 <div className="bg-white rounded-xl p-2 shadow-inner">
                   <VictoryChart
@@ -317,7 +317,7 @@ export default function TransferenciaDetail() {
                       }}
                     />
                     <VictoryBar
-                      data={stats.estadiosData}
+                      data={stats.estadosData}
                       cornerRadius={{ top: 8, bottom: 2 }}
                       style={{
                         data: { fill: '#14b8a6', fillOpacity: 0.9 }
@@ -334,7 +334,7 @@ export default function TransferenciaDetail() {
                 </div>
                 <div className="p-2.5 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border-l-4 border-teal-500 shadow-sm mt-2">
                   <p className="text-xs text-teal-900 font-medium">
-                    💡 Estadio más común: {stats.estadioMasComun}
+                    💡 estado más común: {stats.estadoMasComun}
                   </p>
                 </div>
               </div>
@@ -454,7 +454,7 @@ export default function TransferenciaDetail() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">N°</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Donadora</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Toro</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Estadio</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">estado</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Receptora</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Ciclado</th>
                   </tr>
@@ -467,7 +467,7 @@ export default function TransferenciaDetail() {
                         {t.donadora?.nombre || (t.donadora_id ? `Donadora ${t.donadora_id}` : '—')}
                       </td>
                       <td className="px-3 py-2">{t.toro || '—'}</td>
-                      <td className="px-3 py-2">{t.estadio || '—'}</td>
+                      <td className="px-3 py-2">{t.estado || '—'}</td>
                       <td className="px-3 py-2">{t.receptora || '—'}</td>
                       <td className="px-3 py-2">
                         {t.ciclado_izquierdo && t.ciclado_derecho
@@ -489,3 +489,4 @@ export default function TransferenciaDetail() {
     </div>
   )
 }
+

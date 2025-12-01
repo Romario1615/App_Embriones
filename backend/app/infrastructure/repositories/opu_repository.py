@@ -75,6 +75,7 @@ class OPURepository:
                 grado_3=ext.get("grado_3", 0),
                 desnudos=ext.get("desnudos", 0),
                 irregular=ext.get("irregular", 0),
+                observaciones=ext.get("observaciones"),
             )
             self.db.add(nueva_ext)
 
@@ -133,6 +134,7 @@ class OPURepository:
                     existente.grado_3 = ext.get("grado_3", 0)
                     existente.desnudos = ext.get("desnudos", 0)
                     existente.irregular = ext.get("irregular", 0)
+                    existente.observaciones = ext.get("observaciones")
                     ids_recibidos.add(ext_id)
                 else:
                     nueva_ext = ExtraccionDonadora(
@@ -153,6 +155,7 @@ class OPURepository:
                         grado_3=ext.get("grado_3", 0),
                         desnudos=ext.get("desnudos", 0),
                         irregular=ext.get("irregular", 0),
+                        observaciones=ext.get("observaciones"),
                     )
                     self.db.add(nueva_ext)
 
