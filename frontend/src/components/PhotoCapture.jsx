@@ -176,23 +176,36 @@ export default function PhotoCapture({ photos = [], onChange, maxPhotos = 6 }) {
       {/* Modal de cámara */}
       {showCamera && (
         <div className="fixed inset-0 bg-black z-50 flex flex-col">
+          {/* Boton para cerrar rapido en dispositivos con poco espacio */}
+          <button
+            type="button"
+            onClick={stopCamera}
+            className="absolute top-4 right-4 z-10 bg-gray-900/70 text-white px-3 py-2 rounded-lg flex items-center gap-2"
+          >
+            <X size={18} />
+            <span>Cerrar</span>
+          </button>
+
           {/* Video preview */}
-          <div className="flex-1 flex items-center justify-center relative">
+          <div className="flex-1 min-h-0 flex items-center justify-center relative p-4">
             <video
               ref={videoRef}
               autoPlay
               playsInline
-              className="max-w-full max-h-full"
+              className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg"
             />
             <canvas ref={canvasRef} className="hidden" />
           </div>
 
           {/* Controles */}
-          <div className="bg-gray-900 p-6 flex justify-center items-center space-x-4">
+          <div
+            className="bg-gray-900 p-4 sm:p-6 flex flex-wrap sm:flex-nowrap justify-center items-center gap-3"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+          >
             <button
               type="button"
               onClick={stopCamera}
-              className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 flex items-center space-x-2"
+              className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 flex items-center space-x-2 w-full sm:w-auto justify-center"
             >
               <X size={20} />
               <span>Cancelar</span>
@@ -201,7 +214,7 @@ export default function PhotoCapture({ photos = [], onChange, maxPhotos = 6 }) {
             <button
               type="button"
               onClick={capturePhoto}
-              className="px-8 py-4 bg-primary text-white rounded-full hover:bg-primary-dark flex items-center space-x-2 text-lg font-semibold"
+              className="px-8 py-4 bg-primary text-white rounded-full hover:bg-primary-dark flex items-center space-x-2 text-lg font-semibold w-full sm:w-auto justify-center"
             >
               <Camera size={24} />
               <span>Capturar</span>
