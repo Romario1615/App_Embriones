@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Save, Edit3, Trash2, Eye, Calendar, Target, X, Search } from 'lucide-react'
+import { Plus, Save, Eye, X, Trash2, Calendar, Search } from 'lucide-react'
 import { useTransferenciaStore } from '../store/transferenciaStore'
 import transferenciaService from '../services/transferenciaService'
 import donadoraService from '../services/donadoraService'
@@ -12,6 +12,7 @@ export default function TransferenciaPage() {
   const { transferencias, setTransferencias, addTransferencia, updateTransferencia, removeTransferencia } = useTransferenciaStore()
   const { register, handleSubmit, reset, formState: { errors }, setValue } = useForm()
   const { register: registerSesion, handleSubmit: handleSubmitSesion, reset: resetSesion, formState: { errors: sesionErrors } } = useForm()
+
   const [selectedDonadora, setSelectedDonadora] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [donadorasMap, setDonadorasMap] = useState({})
@@ -62,11 +63,11 @@ export default function TransferenciaPage() {
   }, [donadoraSearch, donadorasList])
 
   const nextNumeroSecuencial = useMemo(() => {
-    const filtered = selectedSesionId
+    const lista = selectedSesionId
       ? transferencias.filter(t => t.sesion_transferencia_id === selectedSesionId)
       : transferencias
-    if (!filtered || filtered.length === 0) return 1
-    return Math.max(...filtered.map(t => Number(t.numero_secuencial) || 0)) + 1
+    if (!lista || lista.length === 0) return 1
+    return Math.max(...lista.map(t => Number(t.numero_secuencial) || 0)) + 1
   }, [transferencias, selectedSesionId])
 
   const handleSelectDonadora = (donadora) => {
@@ -78,7 +79,7 @@ export default function TransferenciaPage() {
   const loadSesionesTransferencia = async () => {
     try {
       const data = await sesionTransferenciaService.getAll()
-      setSesiones(data)
+      setSesiones(data || [])
       const allTransferencias = (data || []).flatMap(s => (s.transferencias_realizadas || []).map(t => ({
         ...t,
         sesion_transferencia_id: s.id,
@@ -86,7 +87,7 @@ export default function TransferenciaPage() {
         sesion_tecnico: s.tecnico_transferencia
       })))
       setTransferencias(allTransferencias)
-      if (!selectedSesionId && data.length > 0) {
+      if (!selectedSesionId && data && data.length > 0) {
         setSelectedSesionId(data[0].id)
       }
     } catch (error) {
@@ -112,13 +113,9 @@ export default function TransferenciaPage() {
   }
 
   const onSubmit = async (data) => {
-    // Prevenir envios concurrentes (doble clic)
-    if (isSubmittingRef.current) {
-      console.warn("Ya hay un envio en progreso, ignorando...")
-      return
-    }
+    if (isSubmittingRef.current) return
     if (!selectedSesionId) {
-      alert("Selecciona o crea una sesión de transferencia primero")
+      alert('Selecciona o crea una sesión de transferencia primero')
       return
     }
 
@@ -130,6 +127,7 @@ export default function TransferenciaPage() {
       donadora_id: selectedDonadora?.id || null,
       sesion_transferencia_id: selectedSesionId
     }
+
     try {
       if (editingId) {
         const updated = await transferenciaService.update(editingId, payload)
@@ -154,7 +152,6 @@ export default function TransferenciaPage() {
     }
   }
 
-  // Agrupar transferencias por fecha de creaciÃ³n (sesiones)
   const handleEdit = async (transferencia) => {
     setEditingId(transferencia.id)
     setShowForm(true)
@@ -185,7 +182,7 @@ export default function TransferenciaPage() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Â¿Eliminar transferencia?')) return
+    if (!window.confirm('¿Eliminar transferencia?')) return
     try {
       await transferenciaService.delete(id)
       removeTransferencia(id)
@@ -195,90 +192,70 @@ export default function TransferenciaPage() {
     }
   }
 
-  const handleEditSesion = async (sesion) => {
-    // Abrir formulario para permitir agregar/editar transferencias de esta sesión
+  const handleEditSesion = (sesion) => {
     setShowForm(true)
     setSelectedSesionId(sesion.id)
     const lista = sesion.transferencias_realizadas || []
     const nextNum = lista.length > 0 ? Math.max(...lista.map(t => Number(t.numero_secuencial) || 0)) + 1 : 1
-    // Limpiar formulario
     reset({
       numero_secuencial: nextNum,
-      fecha: "",
-      tecnico_transferencia: "",
-      cliente: "",
-      finalidad: "",
-      toro: "",
-      raza_toro: "",
-      estado: "",
-      receptora: "",
-      ciclado_izquierdo: "",
-      ciclado_derecho: "",
-      observaciones: ""
+      fecha: '',
+      tecnico_transferencia: '',
+      cliente: '',
+      finalidad: '',
+      toro: '',
+      raza_toro: '',
+      estado: '',
+      receptora: '',
+      ciclado_izquierdo: '',
+      ciclado_derecho: '',
+      observaciones: ''
     })
     setSelectedDonadora(null)
     setEditingId(null)
+  }
+
+  const handleDeleteSesion = async (sesion) => {
+    if (!window.confirm('¿Eliminar la sesión y sus transferencias?')) return
+    try {
+      await sesionTransferenciaService.remove(sesion.id)
+      await loadSesionesTransferencia()
+      if (selectedSesionId === sesion.id) setSelectedSesionId(null)
+    } catch (error) {
+      console.error(error)
+      alert('No se pudo eliminar la sesión')
+    }
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Modulo de Transferencia de Embriones</h1>
-          <p className="text-gray-600">Gestiona sesiones de transferencia</p>
+          <h1 className="text-3xl font-bold text-gray-800">Módulo Transferencias</h1>
+          <p className="text-gray-600">Gestiona sesiones y los registros por donadora</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowSesionForm(!showSesionForm)}
-            className="btn-secondary flex items-center space-x-2 self-start md:self-center"
-          >
-            {showSesionForm ? <X size={18} /> : <Plus size={18} />}
-            <span>{showSesionForm ? "Cerrar sesion" : "Nueva sesion"}</span>
-          </button>
-          <button
-            onClick={() => {
-              setShowForm(!showForm)
-              if (!showForm) {
-                setSelectedSesionId(selectedSesionId || (sesiones[0]?.id ?? null))
-                reset({
-                  numero_secuencial: nextNumeroSecuencial,
-                  fecha: "",
-                  tecnico_transferencia: "",
-                  cliente: "",
-                  finalidad: "",
-                  toro: "",
-                  raza_toro: "",
-                  estado: "",
-                  receptora: "",
-                  ciclado_izquierdo: "",
-                  ciclado_derecho: "",
-                  observaciones: ""
-                })
-                setSelectedDonadora(null)
-                setEditingId(null)
-              }
-            }}
-            className="btn-primary flex items-center space-x-2 self-start md:self-center"
-          >
-            {showForm ? <X size={18} /> : <Plus size={18} />}
-            <span>{showForm ? "Cerrar formulario" : "Nueva transferencia"}</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowSesionForm(!showSesionForm)}
+          className="btn-primary flex items-center space-x-2 self-start md:self-center"
+        >
+          {showSesionForm ? <X size={18} /> : <Plus size={18} />}
+          <span>{showSesionForm ? 'Cerrar sesión' : 'Nueva sesión'}</span>
+        </button>
       </div>
 
       {showSesionForm && (
         <div className="card">
-            <h2 className="text-xl font-semibold mb-4">Registrar sesion de transferencia</h2>
+          <h2 className="text-xl font-semibold mb-4">Registrar sesión de transferencia</h2>
           <form onSubmit={handleSubmitSesion(onSubmitSesion)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
               <div className="flex gap-2">
-                <input type="date" className="input-field flex-1" {...registerSesion("fecha", { required: true })} />
+                <input type="date" className="input-field flex-1" {...registerSesion('fecha', { required: true })} />
                 <button
                   type="button"
                   className="btn-secondary"
                   onClick={() => {
-                    const today = new Date().toISOString().split("T")[0]
+                    const today = new Date().toISOString().split('T')[0]
                     resetSesion({ fecha: today })
                   }}
                 >
@@ -288,35 +265,35 @@ export default function TransferenciaPage() {
               {sesionErrors.fecha && <p className="text-red-500 text-sm">Fecha requerida</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tecnico de transferencia</label>
-              <input className="input-field" {...registerSesion("tecnico_transferencia", { required: true })} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Técnico de transferencia</label>
+              <input className="input-field" {...registerSesion('tecnico_transferencia', { required: true })} />
               {sesionErrors.tecnico_transferencia && <p className="text-red-500 text-sm">Campo requerido</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-              <input className="input-field" {...registerSesion("cliente", { required: true })} />
+              <input className="input-field" {...registerSesion('cliente', { required: true })} />
               {sesionErrors.cliente && <p className="text-red-500 text-sm">Campo requerido</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Receptoras</label>
-              <input className="input-field" {...registerSesion("receptoras")} />
+              <input className="input-field" {...registerSesion('receptoras')} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Hora inicio</label>
-              <input className="input-field" {...registerSesion("hora_inicio")} />
+              <input className="input-field" {...registerSesion('hora_inicio')} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Hora final</label>
-              <input className="input-field" {...registerSesion("hora_final")} />
+              <input className="input-field" {...registerSesion('hora_final')} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Hacienda</label>
-              <input className="input-field" {...registerSesion("hacienda")} />
+              <input className="input-field" {...registerSesion('hacienda')} />
             </div>
             <div className="md:col-span-2 flex space-x-3">
               <button type="submit" className="btn-primary flex items-center space-x-2" disabled={loadingSesion}>
                 <Save size={18} />
-                <span>{loadingSesion ? "Guardando..." : "Guardar sesión"}</span>
+                <span>{loadingSesion ? 'Guardando...' : 'Guardar sesión'}</span>
               </button>
               <button type="button" className="btn-secondary" onClick={() => { resetSesion(); setShowSesionForm(false) }}>Cancelar</button>
             </div>
@@ -330,361 +307,323 @@ export default function TransferenciaPage() {
             {editingId ? 'Editar transferencia' : 'Registrar transferencia'}
           </h2>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Donadora</label>
-              <button
-                type="button"
-                onClick={() => setShowDonadoraModal(true)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                {selectedDonadora ? (
-                  <div>
-                    <p className="font-medium text-gray-900">{selectedDonadora.nombre}</p>
-                    <p className="text-sm text-gray-600">Registro: {selectedDonadora.numero_registro}</p>
-                  </div>
-                ) : (
-                  <span className="text-gray-500">Seleccionar donadora...</span>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Donadora</label>
+                <button
+                  type="button"
+                  onClick={() => setShowDonadoraModal(true)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {selectedDonadora ? (
+                    <div>
+                      <p className="font-medium text-gray-900">{selectedDonadora.nombre}</p>
+                      <p className="text-sm text-gray-600">Registro: {selectedDonadora.numero_registro}</p>
+                    </div>
+                  ) : (
+                    <span className="text-gray-500">Seleccionar donadora...</span>
+                  )}
+                </button>
+                {selectedDonadora && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDonadora(null)}
+                    className="text-sm text-red-600 hover:text-red-800 mt-1"
+                  >
+                    Limpiar selección
+                  </button>
                 )}
-              </button>
-              {selectedDonadora && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedDonadora(null)}
-                  className="text-sm text-red-600 hover:text-red-800 mt-1"
-                >
-                  Limpiar selección
-                </button>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sesión</label>
-              <select
-                className="input-field"
-                value={selectedSesionId || ''}
-                onChange={(e) => setSelectedSesionId(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">Seleccione sesión</option>
-                {sesiones.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.fecha} - {s.tecnico_transferencia}
-                  </option>
-                ))}
-              </select>
-            </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">N° secuencial *</label>
-              <input
-                type="number"
-                className="input-field"
-                {...register('numero_secuencial', { required: 'Campo requerido', min: 1 })}
-                defaultValue={nextNumeroSecuencial}
-                readOnly
-              />
-              {errors.numero_secuencial && <p className="text-red-500 text-sm">{errors.numero_secuencial.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-              <div className="flex gap-2">
-                <input type="date" className="input-field flex-1" {...register('fecha')} />
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => {
-                    const today = new Date().toISOString().split('T')[0]
-                    setValue('fecha', today)
-                  }}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sesión</label>
+                <select
+                  className="input-field"
+                  value={selectedSesionId || ''}
+                  onChange={(e) => setSelectedSesionId(e.target.value ? Number(e.target.value) : null)}
                 >
-                  Hoy
-                </button>
+                  <option value="">Seleccione sesión</option>
+                  {sesiones.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.fecha} - {s.tecnico_transferencia}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">N° secuencial *</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  {...register('numero_secuencial', { required: 'Campo requerido', min: 1 })}
+                  defaultValue={nextNumeroSecuencial}
+                  readOnly
+                />
+                {errors.numero_secuencial && <p className="text-red-500 text-sm">{errors.numero_secuencial.message}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                <div className="flex gap-2">
+                  <input type="date" className="input-field flex-1" {...register('fecha')} />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      const today = new Date().toISOString().split('T')[0]
+                      setValue('fecha', today)
+                    }}
+                  >
+                    Hoy
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Técnico de transferencia</label>
+                <input className="input-field" {...register('tecnico_transferencia')} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                <input className="input-field" {...register('cliente')} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Finalidad</label>
+                <select className="input-field" {...register('finalidad')}>
+                  <option value="">Seleccione</option>
+                  <option value="Fresh">Fresh</option>
+                  <option value="VIT">VIT</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Toro</label>
+                <input className="input-field" {...register('toro')} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Raza del toro</label>
+                <input className="input-field" {...register('raza_toro')} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                <input className="input-field" {...register('estado')} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Receptoras</label>
+                <input className="input-field" {...register('receptora')} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ciclado izquierdo</label>
+                <input className="input-field" {...register('ciclado_izquierdo')} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ciclado derecho</label>
+                <input className="input-field" {...register('ciclado_derecho')} />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tecnico de transferencia</label>
-              <input className="input-field" {...register('tecnico_transferencia')} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+              <textarea className="input-field" rows={3} {...register('observaciones')} />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-              <input className="input-field" {...register('cliente')} />
+            <div className="flex space-x-4">
+              <button type="submit" className="btn-primary flex items-center space-x-2" disabled={loading}>
+                <Save size={18} />
+                <span>{loading ? 'Guardando...' : editingId ? 'Actualizar' : 'Guardar'}</span>
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  reset()
+                  setSelectedDonadora(null)
+                  setEditingId(null)
+                  setShowForm(false)
+                }}
+              >
+                Cancelar
+              </button>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Finalidad</label>
-              <select className="input-field" {...register('finalidad')}>
-                <option value="">Seleccione</option>
-                <option value="Fresh">Fresh</option>
-                <option value="VIT">VIT</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Toro</label>
-              <input className="input-field" {...register('toro')} />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Raza del toro</label>
-              <input className="input-field" {...register('raza_toro')} />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-              <input className="input-field" {...register('estado')} />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Receptoras</label>
-              <input className="input-field" {...register('receptora')} />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ciclado izquierdo</label>
-              <input className="input-field" {...register('ciclado_izquierdo')} />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ciclado derecho</label>
-              <input className="input-field" {...register('ciclado_derecho')} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
-            <textarea className="input-field" rows={3} {...register('observaciones')} />
-          </div>
-
-          <div className="flex space-x-4">
-            <button type="submit" className="btn-primary flex items-center space-x-2" disabled={loading}>
-              <Save size={18} />
-              <span>{loading ? 'Guardando...' : editingId ? 'Actualizar' : 'Guardar'}</span>
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                reset()
-                setSelectedDonadora(null)
-                setEditingId(null)
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-
+          </form>
         </div>
       )}
 
-      {/* Listado de Sesiones */}
-      {!showForm && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Sesiones de Transferencia</h2>
-            <button onClick={loadSesionesTransferencia} className="btn-secondary">Refrescar</button>
-          </div>
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Sesiones de Transferencia</h2>
+          <button onClick={loadSesionesTransferencia} className="btn-secondary">Refrescar</button>
+        </div>
 
-          {sesiones.length === 0 ? (
-            <p className="text-gray-600 text-center py-6">No hay sesiones registradas</p>
-          ) : (
-            <div className="space-y-4">
-              {sesiones.map((sesion, idx) => {
-                const lista = sesion.transferencias_realizadas || []
-                const totalTransferencias = lista.length
-                const conDonadora = lista.filter(t => t.donadora_id).length
-                const estados = new Set(lista.filter(t => t.estado).map(t => t.estado)).size
+        {sesiones.length === 0 ? (
+          <p className="text-gray-600 text-center py-6">No hay sesiones registradas</p>
+        ) : (
+          <div className="space-y-4">
+            {sesiones.map((sesion) => {
+              const lista = sesion.transferencias_realizadas || []
+              const totalTransferencias = lista.length
+              const conDonadora = lista.filter(t => t.donadora_id).length
+              const estados = new Set(lista.filter(t => t.estado).map(t => t.estado)).size
+              const receptoras = new Set(lista.filter(t => t.receptora).map(t => t.receptora)).size
 
-                return (
-                  <div
-                    key={idx}
-                    className="border-2 border-teal-200 rounded-xl p-5 bg-gradient-to-br from-white to-teal-50/30 hover:shadow-lg transition-all duration-300 hover:border-teal-300"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-teal-600 to-cyan-600 p-3 rounded-xl shadow-md">
-                          <Calendar className="text-white" size={24} />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">
-                            {new Date(sesion.fecha).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                          </h3>
-                          <p className="text-sm text-gray-600 mt-1">SesiÃ³n de transferencias</p>
-                        </div>
+              return (
+                <div
+                  key={sesion.id}
+                  className="border-2 border-teal-200 rounded-xl p-5 bg-gradient-to-br from-white to-teal-50/40 hover:shadow-lg transition-all duration-300 hover:border-teal-300"
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="bg-gradient-to-br from-teal-600 to-cyan-600 p-3 rounded-xl shadow-md">
+                      <Calendar className="text-white" size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-lg font-bold text-gray-900">
+                          {sesion.fecha ? new Date(sesion.fecha).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Sin fecha'}
+                        </h3>
+                        <span className="text-xs bg-teal-100 text-teal-800 px-2 py-1 rounded-full font-semibold">
+                          ID: {sesion.id}
+                        </span>
                       </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => handleEditSesion(sesion)}
-                          className="btn-secondary flex items-center gap-1.5 px-3 py-2 text-sm"
-                        >
-                          <Save size={16} />
-                          <span>Editar</span>
-                        </button>
-                        <button
-                          onClick={() => navigate(`/transferencia/${sesion.fecha}`)}
-                          className="btn-primary flex items-center gap-1.5 px-3 py-2 text-sm"
-                        >
-                          <Eye size={16} />
-                          <span>Ver Detalles</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedSesionId(sesion.id)
-                            setShowForm(true)
-                            const listaSel = sesion.transferencias_realizadas || []
-                            const nextNumSel = listaSel.length > 0 ? Math.max(...listaSel.map(t => Number(t.numero_secuencial) || 0)) + 1 : 1
-                            reset({
-                              numero_secuencial: nextNumSel,
-                              fecha: "",
-                              tecnico_transferencia: "",
-                              cliente: "",
-                              finalidad: "",
-                              toro: "",
-                              raza_toro: "",
-                              estado: "",
-                              receptora: "",
-                              ciclado_izquierdo: "",
-                              ciclado_derecho: "",
-                              observaciones: ""
-                            })
-                            setSelectedDonadora(null)
-                            setEditingId(null)
-                          }}
-                          className="btn-secondary flex items-center gap-1.5 px-3 py-2 text-sm"
-                        >
-                          <Plus size={16} />
-                          <span>Agregar transf.</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSesion(sesion)}
-                          className="px-3 py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg border border-red-200 transition-colors flex items-center gap-1.5 font-medium"
-                        >
-                          <Trash2 size={16} />
-                          <span>Eliminar</span>
-                        </button>
+                      <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                        {sesion.tecnico_transferencia && (
+                          <span className="font-medium flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 bg-teal-500 rounded-full" />
+                            {sesion.tecnico_transferencia}
+                          </span>
+                        )}
+                        {sesion.cliente && <span className="font-medium">· {sesion.cliente}</span>}
+                        {sesion.hacienda && <span className="font-medium">· {sesion.hacienda}</span>}
+                        {sesion.finalidad && (
+                          <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs font-semibold capitalize">
+                            {sesion.finalidad}
+                          </span>
+                        )}
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="bg-white/70 rounded-lg p-3 border border-teal-100">
-                        <p className="text-xs text-teal-700 font-semibold uppercase mb-1">Transferencias</p>
-                        <p className="text-2xl font-bold text-teal-900">{totalTransferencias}</p>
-                      </div>
-                      <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
-                        <p className="text-xs text-purple-700 font-semibold uppercase mb-1">Con Donadora</p>
-                        <p className="text-2xl font-bold text-purple-900">{conDonadora}</p>
-                      </div>
-                      <div className="bg-white/70 rounded-lg p-3 border border-blue-100">
-                        <p className="text-xs text-blue-700 font-semibold uppercase mb-1">estados</p>
-                        <p className="text-2xl font-bold text-blue-900">{estados}</p>
-                      </div>
-                      <div className="bg-white/70 rounded-lg p-3 border border-cyan-100">
-                        <p className="text-xs text-cyan-700 font-semibold uppercase mb-1">Tasa</p>
-                        <p className="text-2xl font-bold text-cyan-900">
-                          {totalTransferencias > 0 ? ((conDonadora / totalTransferencias) * 100).toFixed(0) : 0}%
-                        </p>
-                      </div>
-                    </div>
-                    {lista.length > 0 && (
-                      <div className="mt-4 overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-3 py-2 text-left">Nº</th>
-                              <th className="px-3 py-2 text-left">Donadora</th>
-                              <th className="px-3 py-2 text-left">Toro</th>
-                              <th className="px-3 py-2 text-left">Receptora</th>
-                              <th className="px-3 py-2 text-left">Estado</th>
-                              <th className="px-3 py-2 text-left">Acciones</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {lista.map((t) => (
-                              <tr key={t.id}>
-                                <td className="px-3 py-2">{t.numero_secuencial}</td>
-                                <td className="px-3 py-2">{t.donadora_id && donadorasMap[t.donadora_id] ? donadorasMap[t.donadora_id].nombre : '—'}</td>
-                                <td className="px-3 py-2">{t.toro || '—'}</td>
-                                <td className="px-3 py-2">{t.receptora || '—'}</td>
-                                <td className="px-3 py-2">{t.estado || '—'}</td>
-                                <td className="px-3 py-2">
-                                  <div className="flex gap-2">
-                                    <button className="text-blue-600 hover:text-blue-800 text-xs" onClick={() => handleEdit({ ...t, sesion_transferencia_id: sesion.id })}>Editar</button>
-                                    <button className="text-red-600 hover:text-red-800 text-xs" onClick={() => handleDelete(t.id)}>Eliminar</button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* Listado individual (solo si showForm estÃ¡ activo) */}
-      {showForm && (
-        <div className="card">
-          <h2 className="text-xl font-semibold mb-4">Transferencias registradas</h2>
-          {transferencias.length === 0 ? (
-            <p className="text-gray-600">AÃºn no hay transferencias.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">NÂ°</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Donadora</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Toro</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Receptoras</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {transferencias.map((t) => (
-                    <tr key={t.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-2">{t.numero_secuencial}</td>
-                      <td className="px-4 py-2">
-                        {t.donadora_id && donadorasMap[t.donadora_id]
-                          ? donadorasMap[t.donadora_id].nombre
-                          : 'â€”'}
-                      </td>
-                      <td className="px-4 py-2">{t.toro || 'â€”'}</td>
-                      <td className="px-4 py-2">{t.receptora || 'â€”'}</td>
-                      <td className="px-4 py-2">
-                        <div className="flex space-x-3">
-                          <button
-                            className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                            onClick={() => handleEdit(t)}
-                          >
-                            <Edit3 size={16} /> <span>Editar</span>
-                          </button>
-                          <button
-                            className="text-red-600 hover:text-red-800 flex items-center space-x-1"
-                            onClick={() => handleDelete(t.id)}
-                          >
-                            <Trash2 size={16} /> <span>Eliminar</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleEditSesion(sesion)}
+                        className="btn-secondary flex items-center gap-1.5 px-3 py-2 text-sm"
+                      >
+                        <Save size={16} />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={() => navigate(`/transferencia/${sesion.id}`)}
+                        className="btn-primary flex items-center gap-1.5 px-3 py-2 text-sm"
+                      >
+                        <Eye size={16} />
+                        <span>Ver detalles</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedSesionId(sesion.id)
+                          setShowForm(true)
+                          const listaSel = sesion.transferencias_realizadas || []
+                          const nextNumSel = listaSel.length > 0 ? Math.max(...listaSel.map(t => Number(t.numero_secuencial) || 0)) + 1 : 1
+                          reset({
+                            numero_secuencial: nextNumSel,
+                            fecha: '',
+                            tecnico_transferencia: '',
+                            cliente: '',
+                            finalidad: '',
+                            toro: '',
+                            raza_toro: '',
+                            estado: '',
+                            receptora: '',
+                            ciclado_izquierdo: '',
+                            ciclado_derecho: '',
+                            observaciones: ''
+                          })
+                          setSelectedDonadora(null)
+                          setEditingId(null)
+                        }}
+                        className="btn-secondary flex items-center gap-1.5 px-3 py-2 text-sm"
+                      >
+                        <Plus size={16} />
+                        <span>Agregar transf.</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSesion(sesion)}
+                        className="px-3 py-2 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg border border-red-200 transition-colors flex items-center gap-1.5 font-medium"
+                      >
+                        <Trash2 size={16} />
+                        <span>Eliminar</span>
+                      </button>
+                    </div>
+                  </div>
 
-      {/* Modal de selecciÃ³n de donadora */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-white/70 rounded-lg p-3 border border-teal-100">
+                      <p className="text-xs text-teal-700 font-semibold uppercase mb-1">Transferencias</p>
+                      <p className="text-2xl font-bold text-teal-900">{totalTransferencias}</p>
+                    </div>
+                    <div className="bg-white/70 rounded-lg p-3 border border-green-100">
+                      <p className="text-xs text-green-700 font-semibold uppercase mb-1">Con donadora</p>
+                      <p className="text-2xl font-bold text-green-900">{conDonadora}</p>
+                    </div>
+                    <div className="bg-white/70 rounded-lg p-3 border border-blue-100">
+                      <p className="text-xs text-blue-700 font-semibold uppercase mb-1">Estados</p>
+                      <p className="text-2xl font-bold text-blue-900">{estados}</p>
+                    </div>
+                    <div className="bg-white/70 rounded-lg p-3 border border-purple-100">
+                      <p className="text-xs text-purple-700 font-semibold uppercase mb-1">Receptoras</p>
+                      <p className="text-2xl font-bold text-purple-900">{receptoras}</p>
+                    </div>
+                  </div>
+
+                  {lista.length > 0 && (
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left">N°</th>
+                            <th className="px-3 py-2 text-left">Donadora</th>
+                            <th className="px-3 py-2 text-left">Toro</th>
+                            <th className="px-3 py-2 text-left">Receptora</th>
+                            <th className="px-3 py-2 text-left">Estado</th>
+                            <th className="px-3 py-2 text-left">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {lista.map((t) => (
+                            <tr key={t.id}>
+                              <td className="px-3 py-2">{t.numero_secuencial}</td>
+                              <td className="px-3 py-2">{t.donadora_id && donadorasMap[t.donadora_id] ? donadorasMap[t.donadora_id].nombre : '-'}</td>
+                              <td className="px-3 py-2">{t.toro || '-'}</td>
+                              <td className="px-3 py-2">{t.receptora || '-'}</td>
+                              <td className="px-3 py-2">{t.estado || '-'}</td>
+                              <td className="px-3 py-2">
+                                <div className="flex gap-2">
+                                  <button className="text-blue-600 hover:text-blue-800 text-xs" onClick={() => handleEdit({ ...t, sesion_transferencia_id: sesion.id })}>Editar</button>
+                                  <button className="text-red-600 hover:text-red-800 text-xs" onClick={() => handleDelete(t.id)}>Eliminar</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       {showDonadoraModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
@@ -716,7 +655,7 @@ export default function TransferenciaPage() {
                       className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors"
                     >
                       <p className="font-medium text-gray-800">{donadora.nombre}</p>
-                      <p className="text-sm text-gray-600">Registro: {donadora.numero_registro} â€¢ {donadora.raza}</p>
+                      <p className="text-sm text-gray-600">Registro: {donadora.numero_registro} · {donadora.raza}</p>
                     </button>
                   ))
                 )}
